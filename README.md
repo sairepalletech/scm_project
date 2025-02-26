@@ -1,17 +1,19 @@
 # SCM
-Self Managed Configuration Management(SCM) is a simple command line app for configuration management, written in python.
-> Designed to run only on ubuntu operating system
 
-This tool, currently supports below resources 
+Self Managed Configuration Management (SCM) is a simple command-line app for configuration management, written in Python.
+> Designed to run only on Ubuntu operating system.
+
+This tool currently supports the following resources:
 * service
 * directory
 * file 
 * firewall
->A resource definition in scm is directly related to the action of standard linux commands, example. service, directories, files.
 
->pre-requisites install python 3.6 & above environment on the machine
+>A resource definition in SCM is directly related to the action of standard Linux commands, e.g., service, directories, files.
 
-# Installation
+>Pre-requisites: Install Python 3.6 & above environment on the machine.
+
+## Installation
 ```bash
 sudo apt-get update
 sudo apt-get install python3.8 python3-pip -y
@@ -20,12 +22,13 @@ cd /root/scm
 pip3 install scm-config
 scm -v 
 ```
-# Usage
+
+## Usage
 ```bash
 Usage: scm [OPTIONS] COMMAND [ARGS]...
 
 Options:
-  -v, --version                   Display''s the application version
+  -v, --version                   Display's the application version
   --install-completion [bash|zsh|fish|powershell|pwsh]
                                   Install completion for the specified shell.
   --show-completion [bash|zsh|fish|powershell|pwsh]
@@ -42,123 +45,112 @@ Commands:
   remove
   validate
 ```
->> scm creates two directories in the root directory during the "init" command, for example "/root/scm", one is for storing the receipe configuration and other one is for maintaining the configuration in the hash format, this mechanism provides the scm to run any number of times without worrying about the failures.
 
-## Example workflow for Apache+PHP configuration(After the installation)
+> SCM creates two directories in the root directory during the `init` command, for example `/root/scm`. One is for storing the recipe configuration and the other is for maintaining the configuration in the hash format. This mechanism allows SCM to run any number of times without worrying about failures.
 
-- scm init 
-- scm create --receipe "apache"
-- Copy the contents from the [apache.toml](https://github.com/Sai-Repalle/scm_apache/blob/main/apache.toml) to root/scm/config/apache.toml 
-- scm validate --receipe "apache"
-- scm diff --receipe "apache" 
-- scm push --receipe "apache"
+## Example Workflow for Apache+PHP Configuration (After installation)
 
+- `scm init`
+- `scm create --recipe "apache"`
+- Copy the contents from the [apache.toml](https://github.com/Sai-Repalle/scm_apache/blob/main/apache.toml) to `/root/scm/config/apache.toml`
+- `scm validate --recipe "apache"`
+- `scm diff --recipe "apache"`
+- `scm push --recipe "apache"`
 
-# Commands overview 
+## Commands Overview 
 
-| command  | command description                                                                                                                      | usage                                                               | Example                                           |   |
-|----------|------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------|---------------------------------------------------|---|
-| init     | Used for initialization, creates necessary files and directories for the tool to store configuration.                                                                        | scm init                                                            |                                                   |   |
-| create   | Creates the receipe .toml file in the config directory based on the receipe name                                                         | scm create --receipe <name>                                         | scm create --receipe apache                       |   |
-| validate | Validates the receipe file configuration based on the standard defined resources                                                         | scm validate --receipe <name>                                       | scm validate --receipe apache                     |   |
-| info     | Lists the configurations that are defined in the receipe file                                                                            | scm info --receipe <name>                                           | scm info --receipe apache                         |   |
-| diff     | Lists the differences between the existing and the current configuration, if this is this is new receipe, outputs all the configurations | scm diff --receipe <name>                                           | scm diff --receipe apache                         |   |
-| push     | Pushes the configuration defined in the receipe file to the operating system and stores the configuration in config_hash_directory       | scm push --receipe <name>                                           | scm push --receipe apache                         |   |
-| remove   | Removes the configuration from the hash directory and also removes the receipe file from the config directory                            | scm push --receipe <name> [optional --force [optional --clean-files | scm remove --receipe apache --force --clean-files |   |
+| Command  | Description                                                                                                                      | Usage                                                               | Example                                           |
+|----------|----------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------|---------------------------------------------------|
+| `init`     | Initializes the tool, creating necessary files and directories for storing configuration.                                       | `scm init`                                                          |                                                   |
+| `create`   | Creates the recipe `.toml` file in the config directory based on the recipe name.                                               | `scm create --recipe <name>`                                        | `scm create --recipe apache`                      |
+| `validate` | Validates the recipe file configuration based on the standard defined resources.                                               | `scm validate --recipe <name>`                                      | `scm validate --recipe apache`                    |
+| `info`     | Lists the configurations that are defined in the recipe file.                                                                  | `scm info --recipe <name>`                                          | `scm info --recipe apache`                        |
+| `diff`     | Lists the differences between the existing and the current configuration. If this is a new recipe, outputs all the configurations. | `scm diff --recipe <name>`                                          | `scm diff --recipe apache`                        |
+| `push`     | Pushes the configuration defined in the recipe file to the operating system and stores the configuration in the hash directory. | `scm push --recipe <name>`                                          | `scm push --recipe apache`                        |
+| `remove`   | Removes the configuration from the hash directory and also removes the recipe file from the config directory.                  | `scm remove --recipe <name> [optional --force --clean-files]`       | `scm remove --recipe apache --force --clean-files`|
 
+## Resource Detailed Information 
 
-# Resource Detailed information 
-## Service 
-Service resource is useful for installing and managing packages from the linux repository, 
-> Note that currently this tool is designed to support only on Ubuntu Operating System
+### Service 
+The service resource is useful for installing and managing packages from the Linux repository.
+> Note that this tool is currently designed to support only Ubuntu Operating System.
 
-***Name parameter in the below section is a list format, meaning it can take multiple values and the actions and other parameters are applied to each name resource accordingly**
-### Example 
-```
+**Name parameter in the below section is a list format, meaning it can take multiple values and the actions and other parameters are applied to each name resource accordingly.**
+
+#### Example 
+```toml
 [service.setup]
 name = ["apache2"] 
 action= ["install", "enable"]
 ```
-In the above example, "service" is the resource and "setup" is the service identifier. 
-* name  -> Name of the service that is to be installed on the ubuntu system 
-* action -> Action to be done on the listed service, currently these are only supported 
-> ["install", "enable", "disable"]
+In the above example:
+* `name` -> Name of the service to be installed on the Ubuntu system.
+* `action` -> Action to be done on the listed service. Currently supported actions: ["install", "enable", "disable"]
 
-```
+```toml
 [service.ops]
 name = ["apache2"]
 action =["restart"]
 ```
-In the above example, "service" is the resource and "ops" is the service identifier. once the service is installed and service operations can be done using this tool. 
-* name  -> Name of the service that is to be installed on the ubuntu system 
-* action -> Action to be done on the listed service, currently these are only supported 
-> ["stop", "start", "restart", "reload", "disable", "enable"]
+In the above example, once the service is installed, service operations can be done using this tool.
+* `name` -> Name of the service to be managed on the Ubuntu system.
+* `action` -> Action to be done on the listed service. Currently supported actions: ["stop", "start", "restart", "reload", "disable", "enable"]
 
-## Directory
-Directory resource is useful for installing and managing the metadata directories on the system, 
-> Note that currently this resource is tested only on Ubuntu Operating System, but can run on any Linux Operating System
+### Directory
+The directory resource is useful for managing metadata directories on the system. 
+> Note that this resource is currently tested only on Ubuntu Operating System but can run on any Linux Operating System.
 
-### Example 
-```
-# Modify the directory permissions 
+#### Example 
+```toml
 [directory.list]
 name = ["/etc/apache"] 
 params = {'owner'='root','group'='root','mode'= '0755'}
 action = ['create']
 notifies = "@format {this.service.ops}"
 ```
-In the above example, "directory" is the resource and "list" is the service identifier. 
-* name  -> Name of the directory where the metadata needs modification including creation of the directory using the action method
-* params -> parameter to support the directory operations, currently ['owner', 'group' and 'mode'] are supported in the list 
-* action -> Action to be done on the listed service, currently for directories only ['create'] is supported
-* notifies -> Parameter to notify any other resource in the same recipe file, In example, notifies the service ops resources, that would restart the apache2 service based on the modifications 
-> ["install", "enable", "disable"]
+In the above example:
+* `name` -> Name of the directory where metadata needs modification, including creation using the action method.
+* `params` -> Parameters to support directory operations. Currently supported: ['owner', 'group', 'mode'].
+* `action` -> Action to be done on the listed directory. Currently supported: ['create'].
+* `notifies` -> Parameter to notify any other resource in the same recipe file. In this example, it notifies the service ops resources, which would restart the apache2 service based on the modifications.
 
-## File
-File resource is useful for managing the metadata and the content on the linux file system, 
-> Note that currently this resource is tested only on Ubuntu Operating System, but can run on any Linux Operating System
+### File
+The file resource is useful for managing metadata and content on the Linux file system.
+> Note that this resource is currently tested only on Ubuntu Operating System but can run on any Linux Operating System.
 
-### Example 
-```
-# Modify the input content of the file 
+#### Example 
+```toml
 [file.conf]
 name = ["/var/www/customers/public_html/index.php"]
 action = ["create"]
-override ="true"
+override = "true"
 content  = ["This is the test file"]
 params = {'owner'= 'root','group'= 'root','mode' = '0755'}
 notifies = "@format {this.service.ops}"
-
 ```
-In the above example, "file" is the resource and "conf" is the service identifier. 
-* name  -> Name of the file where the content need to be added or appended based on the configuration requirement
-* action -> Action to be done on the listed service, currently for file only ['create'] is supported
-* override -> This parameter will override if there is any existing file, default it will append the content to the file 
-* content -> Input content for the file provide in the form the double quotes. For simplicity ,large content is not tested with the current version of the code. 
-* params -> parameter to support the file operations, currently ['owner', 'group' and 'mode'] are supported in the list 
-* notifies -> Parameter to notify any other resource in the same recipe file, In example, notifies the service ops resources, that would restart the apache2 service based on the modifications 
-> ["install", "enable", "disable"]
+In the above example:
+* `name` -> Name of the file where content needs to be added or appended based on the configuration requirement.
+* `action` -> Action to be done on the listed file. Currently supported: ['create'].
+* `override` -> This parameter will override any existing file. By default, it will append the content to the file.
+* `content` -> Input content for the file provided in double quotes.
+* `params` -> Parameters to support file operations. Currently supported: ['owner', 'group', 'mode'].
+* `notifies` -> Parameter to notify any other resource in the same recipe file. In this example, it notifies the service ops resources, which would restart the apache2 service based on the modifications.
 
+### Firewall
+The firewall resource is useful for managing firewall rules using UFW Linux command.
+> Note that this resource is currently tested only on Ubuntu Operating System but can run on any Linux Operating System.
 
-## Firewall
-Firewall resource is useful for managing firewall rules using UFW linux command, 
-> Note that currently this resource is tested only on Ubuntu Operating System, but can run on any Linux Operating System
-
-### Example 
-```
-# Modify the input content of the file 
+#### Example 
+```toml
 [firewall.setup]
 name = ["Apache"]
-action=["allow"]
+action = ["allow"]
 ```
+In the above example:
+* `name` -> Name of the resource to allow firewall traffic.
+* `action` -> Action to be done on the listed resource. Currently supported: ['allow'].
 
-In the above example, "firewall" is the resource and "setup" is the service identifier. 
-* name  -> Name of the resource where need to allow firewall traffic
-* action -> Action to be done on the listed service, currently for file only ['allow'] is supported 
-> ["allow"]
-
-
-# Complete overview of the example file 
+## Complete Overview of the Example File 
 
 ```toml
 # Service setup for the apache instance 
@@ -190,70 +182,70 @@ content  = ["This is the test file"]
 params = {'owner'= 'root','group'= 'root','mode' = '0755'}
 notifies = "@format {this.service.ops}"
 ```
-# Installation and Usage # 
 
-## Manual clone
+## Installation and Usage
+
+### Manual Clone
 ```bash
-  $ git clone https://github.com/Sai-Repalle/scm_project
-  $ cd scm_project
-  $ python3 -m venv venv 
-  $ source venv/bin/activate
-  $ pip install -r requirements.txt 
+git clone https://github.com/Sai-Repalle/scm_project
+cd scm_project
+python3 -m venv venv 
+source venv/bin/activate
+pip install -r requirements.txt 
 ```
 
-## initialization
-init command is used for initialization and helpful to create the respective directories, also this command is useful for expanding future versions of the scm tool
+### Initialization
+`init` command is used for initialization and helps to create the respective directories. It is also useful for expanding future versions of the SCM tool.
 
-`init`
-Initialize the tool without any parameters, this would set the configuration files required for tool to work
+#### Initialize the Tool
 ```bash
-$ scm init
+scm init
 ```
-### output 
+
+#### Output 
 ```bash   
 scm init
-[INFO][04-22-2022 06:08:13]::Reading the Json configuration /root/scm/scm/settings/settings.json
-[INFO][04-22-2022 06:08:13]::creating directory CONFIG_DIR
-[INFO][04-22-2022 06:08:13]::creating directory CONFIG_HASH_DIR
-[INFO][04-22-2022 06:08:13]::creating files CONFIG_DEF_FILE
-[INFO][04-22-2022 06:08:13]::creating files CONFIG_HASH_FILE
-
+[INFO][04-22-2022 06:08:13]::Reading the JSON configuration /root/scm/scm/settings/settings.json
+[INFO][04-22-2022 06:08:13]::Creating directory CONFIG_DIR
+[INFO][04-22-2022 06:08:13]::Creating directory CONFIG_HASH_DIR
+[INFO][04-22-2022 06:08:13]::Creating files CONFIG_DEF_FILE
+[INFO][04-22-2022 06:08:13]::Creating files CONFIG_HASH_FILE
 ```
-## create
+
+### Create
 `create <name>`
 ```bash
-$ scm create --receipe <receipe>
+scm create --recipe <recipe>
 ```
-Below example, will create a receipe called "apache" and `apache.toml` file is created in the config directory located at the root directory of the scm 
-### output 
+Below example, will create a recipe called "apache" and `apache.toml` file is created in the config directory located at the root directory of the SCM.
+#### Output 
 ```bash
-scm create --receipe apache
-[INFO][04-22-2022 06:09:56]::Reading the Json configuration /root/scm/scm/settings/settings.json
-[INFO][04-22-2022 06:09:56]::creating directory CONFIG_DIR
+scm create --recipe apache
+[INFO][04-22-2022 06:09:56]::Reading the JSON configuration /root/scm/scm/settings/settings.json
+[INFO][04-22-2022 06:09:56]::Creating directory CONFIG_DIR
 [INFO][04-22-2022 06:09:56]::CONFIG_DIR directory already exists
-[INFO][04-22-2022 06:09:56]::creating directory CONFIG_HASH_DIR
+[INFO][04-22-2022 06:09:56]::Creating directory CONFIG_HASH_DIR
 [INFO][04-22-2022 06:09:56]::CONFIG_HASH_DIR directory already exists
-[INFO][04-22-2022 06:09:56]::creating files CONFIG_DEF_FILE
-[INFO][04-22-2022 06:09:56]::creating files CONFIG_HASH_FIL
+[INFO][04-22-2022 06:09:56]::Creating files CONFIG_DEF_FILE
+[INFO][04-22-2022 06:09:56]::Creating files CONFIG_HASH_FILE
 ```
 
-
-## info
-`info --receipe <name>`
+### Info
+`info --recipe <name>`
 ```bash
-$ scm info --receipe <receipe>
+scm info --recipe <recipe>
 ```
-Below example, info command is listing all the resources and its actions based on the configuration defined in the receipe file.
-### output 
+Below example, info command is listing all the resources and its actions based on the configuration defined in the recipe file.
+#### Output 
 ```bash
-scm info --receipe apache
-[INFO][04-25-2022 02:00:37]::Reading the Json configuration /root/scm/settings.json
-[INFO][04-25-2022 02:00:37]::creating directory CONFIG_DIR
+scm info --recipe apache
+[INFO][04-25-2022 02:00:37]::Reading the JSON configuration /root/scm/settings.json
+[INFO][04-25-2022 02:00:37]::Creating directory CONFIG_DIR
 [INFO][04-25-2022 02:00:37]::CONFIG_DIR directory already exists
-[INFO][04-25-2022 02:00:37]::creating directory CONFIG_HASH_DIR
+[INFO][04-25-2022 02:00:37]::Creating directory CONFIG_HASH_DIR
 [INFO][04-25-2022 02:00:37]::CONFIG_HASH_DIR directory already exists
-[INFO][04-25-2022 02:00:37]::creating files CONFIG_DEF_FILE
-[INFO][04-25-2022 02:00:37]::creating files CONFIG_HASH_FILE
+[INFO][04-25-2022 02:00:37]::Creating files CONFIG_DEF_FILE
+[INFO][04-25-2022 02:00:37]::Creating files CONFIG_HASH_FILE
 [INFO][04-25-2022 02:00:37]::SERVICE.setup - {'name': ['apache2'], 'action': ['install', 'enable', 'start']}
 [INFO][04-25-2022 02:00:37]::SERVICE.ops - {'name': ['apache2'], 'action': ['restart']}
 [INFO][04-25-2022 02:00:37]::SERVICE.setup_php - {'name': ['php', 'libapache2-mod-php'], 'action': ['install']}
@@ -262,134 +254,72 @@ scm info --receipe apache
 [INFO][04-25-2022 02:00:37]::FILE.phpindex - {'name': ['/etc/apache2/mods-enabled/dir.conf'], 'action': ['create'], 'override': 'true', 'content': ['<IfModule mod_dir.c>\n DirectoryIndex index.php index.html index.cgi index.pl index.xhtml index.htm </IfModule>'], 'params': {'owner': 'root', 'group': 'root', 'mode': '0755'}, 'notifies': "{'name': ['apache2'], 'action': ['restart']}"}
 ```
 
-## validate
-`validate -receipe <name>`
+### Validate
+`validate --recipe <name>`
 ```bash
-$ scm validate --receipe <receipe>
+scm validate --recipe <recipe>
 ```
-Below example, validate command is validating all the resources and its actions based on the configuration defined in the receipe file, If all the resources and its configurations are in valid state, receipe would output to do next step, if there are any issues, please refere to the documentation.
-### output  
+Below example, validate command is validating all the resources and its actions based on the configuration defined in the recipe file. If all the resources and their configurations are in a valid state, the recipe would output to do the next step. If there are any issues, please refer to the documentation.
+#### Output  
 ```bash
-scm validate --receipe apache
-[INFO][04-25-2022 02:01:47]::Reading the Json configuration /root/scm/settings.json
-[INFO][04-25-2022 02:01:47]::creating directory CONFIG_DIR
+scm validate --recipe apache
+[INFO][04-25-2022 02:01:47]::Reading the JSON configuration /root/scm/settings.json
+[INFO][04-25-2022 02:01:47]::Creating directory CONFIG_DIR
 [INFO][04-25-2022 02:01:47]::CONFIG_DIR directory already exists
-[INFO][04-25-2022 02:01:47]::creating directory CONFIG_HASH_DIR
+[INFO][04-25-2022 02:01:47]::Creating directory CONFIG_HASH_DIR
 [INFO][04-25-2022 02:01:47]::CONFIG_HASH_DIR directory already exists
-[INFO][04-25-2022 02:01:47]::creating files CONFIG_DEF_FILE
-[INFO][04-25-2022 02:01:47]::creating files CONFIG_HASH_FILE
-[INFO][04-25-2022 02:01:47]::apache receipe file is valid for push, use `scm diff` to differences with the existing configuration
+[INFO][04-25-2022 02:01:47]::Creating files CONFIG_DEF_FILE
+[INFO][04-25-2022 02:01:47]::Creating files CONFIG_HASH_FILE
+[INFO][04-25-2022 02:01:47]::apache recipe file is valid for push, use `scm diff` to see differences with the existing configuration
 ```
 
-## diff
-`diff -receipe <name>`
+### Diff
+`diff --recipe <name>`
 ```bash
-$ scm diff --receipe <receipe>
+scm diff --recipe <recipe>
 ```
-In the below example, if the confiugration in the receipe file is already appplied, scm would output that the configuration is update to date with the existing configuration 
+In the below example, if the configuration in the recipe file is already applied, SCM would output that the configuration is up to date with the existing configuration.
+#### Output (Up-to-date)
 ```bash
-[INFO][04-25-2022 02:05:00]::Reading the Json configuration /root/scm/settings.json
-[INFO][04-25-2022 02:05:00]::Reading the Json configuration /root/scm/settings.json
-[INFO][04-25-2022 02:05:00]::creating directory CONFIG_DIR
-[INFO][04-25-2022 02:05:00]::CONFIG_DIR directory already exists
-[INFO][04-25-2022 02:05:00]::creating directory CONFIG_HASH_DIR
-[INFO][04-25-2022 02:05:00]::CONFIG_HASH_DIR directory already exists
-[INFO][04-25-2022 02:05:00]::creating files CONFIG_DEF_FILE
-[INFO][04-25-2022 02:05:00]::creating files CONFIG_HASH_FILE
-[INFO][04-25-2022 02:05:00]::apache receipe file is valid for push, use `scm diff` to differences with the existing configuration
-[INFO][04-25-2022 02:05:00]::Reading the Json configuration config_hash/hash_config_md5.json
-[INFO][04-25-2022 02:05:00]::`apache` configuration is update to date with the existing configuration
+scm diff --recipe apache
+[INFO][04-25-2022 02:05:00]::Reading the JSON configuration /root/scm/settings.json
+[INFO][04-25-2022 02:05:00]::Creating directory CONFIG_DIR
+[INFO][04-25-2022 02:05:00]::Creating directory CONFIG_HASH_DIR
+[INFO][04-25-2022 02:05:00]::Creating files CONFIG_DEF_FILE
+[INFO][04-25-2022 02:05:00]::Creating files CONFIG_HASH_FILE
+[INFO][04-25-2022 02:05:00]::apache recipe file is valid for push, use `scm diff` to see differences with the existing configuration
+[INFO][04-25-2022 02:05:00]::Reading the JSON configuration config_hash/hash_config_md5.json
+[INFO][04-25-2022 02:05:00]::`apache` configuration is up to date with the existing configuration
 ```
-In the below example, if the configuration in the receipe file is pushed to the operating system to install the required services 
+
+In the below example, if the configuration in the recipe file is pushed to the operating system to install the required services.
+#### Output (Changes Required)
 ```bash
-root@ip-172-31-255-140:~/scm/config# scm diff --receipe apache_remove
-[INFO][04-25-2022 02:20:37]::Reading the Json configuration /root/scm/config/settings.json
-[INFO][04-25-2022 02:20:37]::Reading the Json configuration /root/scm/config/settings.json
-[INFO][04-25-2022 02:20:37]::creating directory CONFIG_DIR
-[INFO][04-25-2022 02:20:37]::CONFIG_DIR directory already exists
-[INFO][04-25-2022 02:20:37]::creating directory CONFIG_HASH_DIR
-[INFO][04-25-2022 02:20:37]::CONFIG_HASH_DIR directory already exists
-[INFO][04-25-2022 02:20:37]::creating files CONFIG_DEF_FILE
-[INFO][04-25-2022 02:20:37]::CONFIG_DEF_FILE file already exists
-[INFO][04-25-2022 02:20:37]::creating files CONFIG_HASH_FILE
-[INFO][04-25-2022 02:20:37]::apache_remove receipe file is valid for push, use `scm diff` to differences with the existing configuration
-[INFO][04-25-2022 02:20:37]::Reading the Json configuration config_hash/hash_config_md5.json
+scm diff --recipe apache_remove
+[INFO][04-25-2022 02:20:37]::Reading the JSON configuration /root/scm/settings.json
+[INFO][04-25-2022 02:20:37]::Creating directory CONFIG_DIR
+[INFO][04-25-2022 02:20:37]::Creating directory CONFIG_HASH_DIR
+[INFO][04-25-2022 02:20:37]::Creating files CONFIG_DEF_FILE
+[INFO][04-25-2022 02:20:37]::apache_remove recipe file is valid for push, use `scm diff` to see differences with the existing configuration
+[INFO][04-25-2022 02:20:37]::Reading the JSON configuration config_hash/hash_config_md5.json
 [INFO][04-25-2022 02:20:37]::Following resources will be applied:
 [INFO][04-25-2022 02:20:37]::SERVICE.setup: ['systemctl stop apache2', 'systemctl disable apache2', 'sudo apt-get update -y', 'sudo apt-get remove apache2 -y']
-[INFO][04-25-2022 02:20:37]::Following resources will be applied:
 [INFO][04-25-2022 02:20:37]::SERVICE.setup_php: ['sudo apt-get update -y', 'sudo apt-get remove php -y', 'sudo apt-get update -y', 'sudo apt-get remove libapache2-mod-php -y']
 ```
-## push
-`push -receipe <name>`
-```bash
-$ scm push --receipe <receipe>
-```
-In the below example, scm push is pushing hte receipe named "apache_remove" and the subsequent commands are being run on the operating to the remove the services 
-### output
-```bash
-root@ip-172-31-255-140:~/scm/config# scm push  --receipe apache_remove
-[INFO][04-25-2022 02:21:34]::Reading the Json configuration /root/scm/config/settings.json
-[INFO][04-25-2022 02:21:34]::Reading the Json configuration /root/scm/config/settings.json
-[INFO][04-25-2022 02:21:34]::creating directory CONFIG_DIR
-[INFO][04-25-2022 02:21:34]::CONFIG_DIR directory already exists
-[INFO][04-25-2022 02:21:34]::creating directory CONFIG_HASH_DIR
-[INFO][04-25-2022 02:21:34]::CONFIG_HASH_DIR directory already exists
-[INFO][04-25-2022 02:21:34]::creating files CONFIG_DEF_FILE
-[INFO][04-25-2022 02:21:34]::CONFIG_DEF_FILE file already exists
-[INFO][04-25-2022 02:21:34]::creating files CONFIG_HASH_FILE
-[INFO][04-25-2022 02:21:34]::apache_remove receipe file is valid for push, use `scm diff` to differences with the existing configuration
-[INFO][04-25-2022 02:21:34]::Reading the Json configuration config_hash/hash_config_md5.json
-[INFO][04-25-2022 02:21:34]::Reading the Json configuration /root/scm/config/settings.json
-[INFO][04-25-2022 02:21:34]::Following resources will be applied:
-[INFO][04-25-2022 02:21:34]::SERVICE.setup: ['systemctl stop apache2', 'systemctl disable apache2', 'sudo apt-get update -y', 'sudo apt-get remove apache2 -y']
-[INFO][04-25-2022 02:21:34]::Applying the command `systemctl stop apache2`
-[INFO][04-25-2022 02:21:35]::Applying the command `systemctl disable apache2`
-Synchronizing state of apache2.service with SysV service script with /lib/systemd/systemd-sysv-install.
-Executing: /lib/systemd/systemd-sysv-install disable apache2
-[INFO][04-25-2022 02:21:35]::Applying the command `sudo apt-get update -y`
-Hit:1 http://us-east-1.ec2.archive.ubuntu.com/ubuntu bionic InRelease
-Get:2 http://us-east-1.ec2.archive.ubuntu.com/ubuntu bionic-updates InRelease [88.7 kB]
-Get:3 http://us-east-1.ec2.archive.ubuntu.com/ubuntu bionic-backports InRelease [74.6 kB]
-Get:4 http://security.ubuntu.com/ubuntu bionic-security InRelease [88.7 kB]
-Fetched 252 kB in 0s (666 kB/s)
-Reading package lists... Done
-[INFO][04-25-2022 02:21:42]::Applying the command `sudo apt-get remove apache2 -y`
-Reading package lists... Done
-Building dependency tree
-Reading state information... Done
-The following packages were automatically installed and are no longer required:
-  apache2-data apache2-utils ssl-cert
-Use 'sudo apt autoremove' to remove them.
-The following packages will be REMOVED:
-  apache2
-0 upgraded, 0 newly installed, 1 to remove and 2 not upgraded.
-After this operation, 537 kB disk space will be freed.
-(Reading database ... 94525 files and directories currently installed.)
-Removing apache2 (2.4.29-1ubuntu4.22) ...
-Processing triggers for man-db (2.8.3-2ubuntu0.1) ...
-Processing triggers for ufw (0.36-0ubuntu0.18.04.2) ...
-Rules updated for profile 'Apache'
 
-```
-
-## remove
-`remove --receipe <name> --force <optional> --clean_files <optional>`
+### Push
+`push --recipe <name>`
 ```bash
-$ scm push --receipe <receipe>
+scm push --recipe <recipe>
 ```
-In the below example, scm is removing the `apache_remove` receipe from the configuration hash directory,
-### output 
+In the below example, `scm push` is pushing the recipe named `apache_remove` and the subsequent commands are being run on the operating system to remove the services.
+#### Output
 ```bash
-scm remove --receipe apache_remove
-[INFO][04-25-2022 02:33:38]::Reading the Json configuration /root/scm/config/settings.json
-[INFO][04-25-2022 02:33:38]::Reading the Json configuration /root/scm/config/settings.json
-[INFO][04-25-2022 02:33:38]::creating directory CONFIG_DIR
-[INFO][04-25-2022 02:33:38]::CONFIG_DIR directory already exists
-[INFO][04-25-2022 02:33:38]::creating directory CONFIG_HASH_DIR
-[INFO][04-25-2022 02:33:38]::CONFIG_HASH_DIR directory already exists
-[INFO][04-25-2022 02:33:38]::creating files CONFIG_DEF_FILE
-[INFO][04-25-2022 02:33:38]::CONFIG_DEF_FILE file already exists
-[INFO][04-25-2022 02:33:38]::creating files CONFIG_HASH_FILE
-[INFO][04-25-2022 02:33:38]::apache_remove receipe file is valid for push, use `scm diff` to differences with the existing configuration
-[INFO][04-25-2022 02:33:38]::Configuration doesn't remove the receipe file, please clean up manually
-```
+scm push --recipe apache_remove
+[INFO][04-25-2022 02:21:34]::Reading the JSON configuration /root/scm/settings.json
+[INFO][04-25-2022 02:21:34]::Creating directory CONFIG_DIR
+[INFO][04-25-2022 02:21:34]::Creating directory CONFIG_HASH_DIR
+[INFO][04-25-2022 02:21:34]::Creating files CONFIG_DEF_FILE
+[INFO][04-25-2022 02:21:34]::apache_remove recipe file is valid for push, use `scm diff` to see differences with the existing configuration
+[INFO][04-25-2022 02:21:34]::Reading the JSON configuration config_hash/hash_config_md5.json
+[INFO][04-25-2022 02:21
