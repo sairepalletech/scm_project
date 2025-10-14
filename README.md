@@ -42,16 +42,16 @@ Commands:
   remove
   validate
 ```
->> scm creates two directories in the root directory during the "init" command, for example "/root/scm", one is for storing the receipe configuration and other one is for maintaining the configuration in the hash format, this mechanism provides the scm to run any number of times without worrying about the failures.
+>> scm creates two directories in the root directory during the "init" command, for example "/root/scm", one is for storing the recipe configuration and other one is for maintaining the configuration in the hash format, this mechanism provides the scm to run any number of times without worrying about the failures.
 
 ## Example workflow for Apache+PHP configuration(After the installation)
 
 - scm init 
-- scm create --receipe "apache"
+- scm create --recipe "apache"
 - Copy the contents from the [apache.toml](https://github.com/Sai-Repalle/scm_apache/blob/main/apache.toml) to root/scm/config/apache.toml 
-- scm validate --receipe "apache"
-- scm diff --receipe "apache" 
-- scm push --receipe "apache"
+- scm validate --recipe "apache"
+- scm diff --recipe "apache" 
+- scm push --recipe "apache"
 
 
 # Commands overview 
@@ -59,12 +59,12 @@ Commands:
 | command  | command description                                                                                                                      | usage                                                               | Example                                           |   |
 |----------|------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------|---------------------------------------------------|---|
 | init     | Used for initialization, creates necessary files and directories for the tool to store configuration.                                                                        | scm init                                                            |                                                   |   |
-| create   | Creates the receipe .toml file in the config directory based on the receipe name                                                         | scm create --receipe <name>                                         | scm create --receipe apache                       |   |
-| validate | Validates the receipe file configuration based on the standard defined resources                                                         | scm validate --receipe <name>                                       | scm validate --receipe apache                     |   |
-| info     | Lists the configurations that are defined in the receipe file                                                                            | scm info --receipe <name>                                           | scm info --receipe apache                         |   |
-| diff     | Lists the differences between the existing and the current configuration, if this is this is new receipe, outputs all the configurations | scm diff --receipe <name>                                           | scm diff --receipe apache                         |   |
-| push     | Pushes the configuration defined in the receipe file to the operating system and stores the configuration in config_hash_directory       | scm push --receipe <name>                                           | scm push --receipe apache                         |   |
-| remove   | Removes the configuration from the hash directory and also removes the receipe file from the config directory                            | scm push --receipe <name> [optional --force [optional --clean-files | scm remove --receipe apache --force --clean-files |   |
+| create   | Creates the recipe .toml file in the config directory based on the recipe name                                                         | scm create --recipe <name>                                         | scm create --recipe apache                       |   |
+| validate | Validates the recipe file configuration based on the standard defined resources                                                         | scm validate --recipe <name>                                       | scm validate --recipe apache                     |   |
+| info     | Lists the configurations that are defined in the recipe file                                                                            | scm info --recipe <name>                                           | scm info --recipe apache                         |   |
+| diff     | Lists the differences between the existing and the current configuration, if this is this is new recipe, outputs all the configurations | scm diff --recipe <name>                                           | scm diff --recipe apache                         |   |
+| push     | Pushes the configuration defined in the recipe file to the operating system and stores the configuration in config_hash_directory       | scm push --recipe <name>                                           | scm push --recipe apache                         |   |
+| remove   | Removes the configuration from the hash directory and also removes the recipe file from the config directory                            | scm push --recipe <name> [optional --force [optional --clean-files | scm remove --recipe apache --force --clean-files |   |
 
 
 # Resource Detailed information 
@@ -222,12 +222,12 @@ scm init
 ## create
 `create <name>`
 ```bash
-$ scm create --receipe <receipe>
+$ scm create --recipe <recipe>
 ```
-Below example, will create a receipe called "apache" and `apache.toml` file is created in the config directory located at the root directory of the scm 
+Below example, will create a recipe called "apache" and `apache.toml` file is created in the config directory located at the root directory of the scm 
 ### output 
 ```bash
-scm create --receipe apache
+scm create --recipe apache
 [INFO][04-22-2022 06:09:56]::Reading the Json configuration /root/scm/scm/settings/settings.json
 [INFO][04-22-2022 06:09:56]::creating directory CONFIG_DIR
 [INFO][04-22-2022 06:09:56]::CONFIG_DIR directory already exists
@@ -239,14 +239,14 @@ scm create --receipe apache
 
 
 ## info
-`info --receipe <name>`
+`info --recipe <name>`
 ```bash
-$ scm info --receipe <receipe>
+$ scm info --recipe <recipe>
 ```
-Below example, info command is listing all the resources and its actions based on the configuration defined in the receipe file.
+Below example, info command is listing all the resources and its actions based on the configuration defined in the recipe file.
 ### output 
 ```bash
-scm info --receipe apache
+scm info --recipe apache
 [INFO][04-25-2022 02:00:37]::Reading the Json configuration /root/scm/settings.json
 [INFO][04-25-2022 02:00:37]::creating directory CONFIG_DIR
 [INFO][04-25-2022 02:00:37]::CONFIG_DIR directory already exists
@@ -263,14 +263,14 @@ scm info --receipe apache
 ```
 
 ## validate
-`validate -receipe <name>`
+`validate -recipe <name>`
 ```bash
-$ scm validate --receipe <receipe>
+$ scm validate --recipe <recipe>
 ```
-Below example, validate command is validating all the resources and its actions based on the configuration defined in the receipe file, If all the resources and its configurations are in valid state, receipe would output to do next step, if there are any issues, please refere to the documentation.
+Below example, validate command is validating all the resources and its actions based on the configuration defined in the recipe file, If all the resources and its configurations are in valid state, recipe would output to do next step, if there are any issues, please refere to the documentation.
 ### output  
 ```bash
-scm validate --receipe apache
+scm validate --recipe apache
 [INFO][04-25-2022 02:01:47]::Reading the Json configuration /root/scm/settings.json
 [INFO][04-25-2022 02:01:47]::creating directory CONFIG_DIR
 [INFO][04-25-2022 02:01:47]::CONFIG_DIR directory already exists
@@ -278,15 +278,15 @@ scm validate --receipe apache
 [INFO][04-25-2022 02:01:47]::CONFIG_HASH_DIR directory already exists
 [INFO][04-25-2022 02:01:47]::creating files CONFIG_DEF_FILE
 [INFO][04-25-2022 02:01:47]::creating files CONFIG_HASH_FILE
-[INFO][04-25-2022 02:01:47]::apache receipe file is valid for push, use `scm diff` to differences with the existing configuration
+[INFO][04-25-2022 02:01:47]::apache recipe file is valid for push, use `scm diff` to differences with the existing configuration
 ```
 
 ## diff
-`diff -receipe <name>`
+`diff -recipe <name>`
 ```bash
-$ scm diff --receipe <receipe>
+$ scm diff --recipe <recipe>
 ```
-In the below example, if the confiugration in the receipe file is already appplied, scm would output that the configuration is update to date with the existing configuration 
+In the below example, if the confiugration in the recipe file is already appplied, scm would output that the configuration is update to date with the existing configuration 
 ```bash
 [INFO][04-25-2022 02:05:00]::Reading the Json configuration /root/scm/settings.json
 [INFO][04-25-2022 02:05:00]::Reading the Json configuration /root/scm/settings.json
@@ -296,13 +296,13 @@ In the below example, if the confiugration in the receipe file is already apppli
 [INFO][04-25-2022 02:05:00]::CONFIG_HASH_DIR directory already exists
 [INFO][04-25-2022 02:05:00]::creating files CONFIG_DEF_FILE
 [INFO][04-25-2022 02:05:00]::creating files CONFIG_HASH_FILE
-[INFO][04-25-2022 02:05:00]::apache receipe file is valid for push, use `scm diff` to differences with the existing configuration
+[INFO][04-25-2022 02:05:00]::apache recipe file is valid for push, use `scm diff` to differences with the existing configuration
 [INFO][04-25-2022 02:05:00]::Reading the Json configuration config_hash/hash_config_md5.json
 [INFO][04-25-2022 02:05:00]::`apache` configuration is update to date with the existing configuration
 ```
-In the below example, if the configuration in the receipe file is pushed to the operating system to install the required services 
+In the below example, if the configuration in the recipe file is pushed to the operating system to install the required services 
 ```bash
-root@ip-172-31-255-140:~/scm/config# scm diff --receipe apache_remove
+root@ip-172-31-255-140:~/scm/config# scm diff --recipe apache_remove
 [INFO][04-25-2022 02:20:37]::Reading the Json configuration /root/scm/config/settings.json
 [INFO][04-25-2022 02:20:37]::Reading the Json configuration /root/scm/config/settings.json
 [INFO][04-25-2022 02:20:37]::creating directory CONFIG_DIR
@@ -312,7 +312,7 @@ root@ip-172-31-255-140:~/scm/config# scm diff --receipe apache_remove
 [INFO][04-25-2022 02:20:37]::creating files CONFIG_DEF_FILE
 [INFO][04-25-2022 02:20:37]::CONFIG_DEF_FILE file already exists
 [INFO][04-25-2022 02:20:37]::creating files CONFIG_HASH_FILE
-[INFO][04-25-2022 02:20:37]::apache_remove receipe file is valid for push, use `scm diff` to differences with the existing configuration
+[INFO][04-25-2022 02:20:37]::apache_remove recipe file is valid for push, use `scm diff` to differences with the existing configuration
 [INFO][04-25-2022 02:20:37]::Reading the Json configuration config_hash/hash_config_md5.json
 [INFO][04-25-2022 02:20:37]::Following resources will be applied:
 [INFO][04-25-2022 02:20:37]::SERVICE.setup: ['systemctl stop apache2', 'systemctl disable apache2', 'sudo apt-get update -y', 'sudo apt-get remove apache2 -y']
@@ -320,14 +320,14 @@ root@ip-172-31-255-140:~/scm/config# scm diff --receipe apache_remove
 [INFO][04-25-2022 02:20:37]::SERVICE.setup_php: ['sudo apt-get update -y', 'sudo apt-get remove php -y', 'sudo apt-get update -y', 'sudo apt-get remove libapache2-mod-php -y']
 ```
 ## push
-`push -receipe <name>`
+`push -recipe <name>`
 ```bash
-$ scm push --receipe <receipe>
+$ scm push --recipe <recipe>
 ```
-In the below example, scm push is pushing hte receipe named "apache_remove" and the subsequent commands are being run on the operating to the remove the services 
+In the below example, scm push is pushing hte recipe named "apache_remove" and the subsequent commands are being run on the operating to the remove the services 
 ### output
 ```bash
-root@ip-172-31-255-140:~/scm/config# scm push  --receipe apache_remove
+root@ip-172-31-255-140:~/scm/config# scm push  --recipe apache_remove
 [INFO][04-25-2022 02:21:34]::Reading the Json configuration /root/scm/config/settings.json
 [INFO][04-25-2022 02:21:34]::Reading the Json configuration /root/scm/config/settings.json
 [INFO][04-25-2022 02:21:34]::creating directory CONFIG_DIR
@@ -337,7 +337,7 @@ root@ip-172-31-255-140:~/scm/config# scm push  --receipe apache_remove
 [INFO][04-25-2022 02:21:34]::creating files CONFIG_DEF_FILE
 [INFO][04-25-2022 02:21:34]::CONFIG_DEF_FILE file already exists
 [INFO][04-25-2022 02:21:34]::creating files CONFIG_HASH_FILE
-[INFO][04-25-2022 02:21:34]::apache_remove receipe file is valid for push, use `scm diff` to differences with the existing configuration
+[INFO][04-25-2022 02:21:34]::apache_remove recipe file is valid for push, use `scm diff` to differences with the existing configuration
 [INFO][04-25-2022 02:21:34]::Reading the Json configuration config_hash/hash_config_md5.json
 [INFO][04-25-2022 02:21:34]::Reading the Json configuration /root/scm/config/settings.json
 [INFO][04-25-2022 02:21:34]::Following resources will be applied:
@@ -373,14 +373,14 @@ Rules updated for profile 'Apache'
 ```
 
 ## remove
-`remove --receipe <name> --force <optional> --clean_files <optional>`
+`remove --recipe <name> --force <optional> --clean_files <optional>`
 ```bash
-$ scm push --receipe <receipe>
+$ scm push --recipe <recipe>
 ```
-In the below example, scm is removing the `apache_remove` receipe from the configuration hash directory,
+In the below example, scm is removing the `apache_remove` recipe from the configuration hash directory,
 ### output 
 ```bash
-scm remove --receipe apache_remove
+scm remove --recipe apache_remove
 [INFO][04-25-2022 02:33:38]::Reading the Json configuration /root/scm/config/settings.json
 [INFO][04-25-2022 02:33:38]::Reading the Json configuration /root/scm/config/settings.json
 [INFO][04-25-2022 02:33:38]::creating directory CONFIG_DIR
@@ -390,6 +390,6 @@ scm remove --receipe apache_remove
 [INFO][04-25-2022 02:33:38]::creating files CONFIG_DEF_FILE
 [INFO][04-25-2022 02:33:38]::CONFIG_DEF_FILE file already exists
 [INFO][04-25-2022 02:33:38]::creating files CONFIG_HASH_FILE
-[INFO][04-25-2022 02:33:38]::apache_remove receipe file is valid for push, use `scm diff` to differences with the existing configuration
-[INFO][04-25-2022 02:33:38]::Configuration doesn't remove the receipe file, please clean up manually
+[INFO][04-25-2022 02:33:38]::apache_remove recipe file is valid for push, use `scm diff` to differences with the existing configuration
+[INFO][04-25-2022 02:33:38]::Configuration doesn't remove the recipe file, please clean up manually
 ```
