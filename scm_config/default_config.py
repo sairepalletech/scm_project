@@ -2,7 +2,7 @@
 # scm/defaults_config.py
 import os
 import logging
-from typing import List, Set, Dict
+from typing import List, Set, Dict, Optional
 from dynaconf import Dynaconf
 from dynaconf.utils.boxing import DynaBox
 from ordered_set import OrderedSet
@@ -10,17 +10,17 @@ import json
 import shlex 
 from deepdiff import DeepDiff
 from json.decoder import JSONDecodeError
-from scm_config.defaults import JSON_DIFF_ATTR
 from pathlib import Path
-from scm_config import defaults
-from subprocess import STDOUT, check_call, CalledProcessError
 
+from scm_config import defaults
+from scm_config.defaults import JSON_DIFF_ATTR
+from scm_config import constants
+from subprocess import STDOUT, check_call, CalledProcessError
 from scm_config import (
     DIR_ERROR,
     FILE_ERROR,
     SUCCESS,
     __app_name__
-
 )
 
 CONFIG_DIR = OrderedSet(['CONFIG_DIR', 'CONFIG_HASH_DIR'])
@@ -31,198 +31,321 @@ CONFIG_FILE_PATH = os.path.join(
     "settings.json")
 
 
-def read_json(filename):
+def read_json(filename: str) -> Optional[Dict]:
+    """
+    Read and parse a JSON configuration file.
+    
+    Args:
+        filename: Path to the JSON file to read
+        
+    Returns:
+        Dictionary containing the parsed JSON, or FILE_ERROR on failure
+    """
     try:
-        with open(filename) as file:
-            logging.info(f"Reading the Json configuration {filename}")
+        with open(filename) as config_file:
+            logging.info(f"Reading the JSON configuration {filename}")
             try:
-                return dict(json.load(file))
+                return dict(json.load(config_file))
             except JSONDecodeError:
-                logging.warning(f"Invalid JSON file {file}")
+                logging.warning(f"Invalid JSON file {filename}")
                 return FILE_ERROR
     except FileNotFoundError:
         logging.error(f"File {filename} not found")
         return FILE_ERROR
 
 
-def create_def_directory(user_dict) -> bool:
-    for key in CONFIG_DIR:
-        logging.info(f"creating directory {key}")
-        if user_dict.get(key, None):
-            if not os.path.exists(user_dict[key]):
-                os.mkdir(user_dict[key])
+def create_def_directory(user_dict: Dict) -> bool:
+    """
+    Create default directories for SCM configuration.
+    
+    Args:
+        user_dict: Dictionary containing directory configuration
+        
+    Returns:
+        True if all directories were created successfully, False otherwise
+    """
+    for dir_key in CONFIG_DIR:
+        logging.info(f"Creating directory {dir_key}")
+        dir_path = user_dict.get(dir_key)
+        if dir_path:
+            if not os.path.exists(dir_path):
+                os.mkdir(dir_path)
             else:
-                logging.info(f"{key} directory already exists")
+                logging.info(f"{dir_key} directory already exists")
         else:
-            logging.warning(f"Missing {key} value to create the directories")
+            logging.warning(f"Missing {dir_key} value to create the directories")
             return False
     return True
 
 
-def create_def_files(user_dict) -> bool:
-    for key in CONFIG_FILES:
-        logging.info(f"creating files {key}")
-        if user_dict.get(key, None):
-            if not os.path.exists(user_dict[key]):
-                if key == "CONFIG_DEF_FILE":
-                    Path(
-                        os.path.join(
-                            user_dict['CONFIG_DIR'],
-                            user_dict[key])).touch()
-                else:
-                    hash_directory = os.path.join(
-                            user_dict['CONFIG_HASH_DIR'],
-                            user_dict[key])
-                    if not os.path.exists(hash_directory):
-                        Path(hash_directory).touch()
-                        #write empty json dict to the file 
-                        d = {}
-                        # Serializing json 
-                        json_object = json.dumps(d, indent = 4)
-                        # Writing to sample.json
-                        with open(os.path.join(
-                                user_dict['CONFIG_HASH_DIR'],
-                                user_dict[key]), "w") as outfile:
-                            outfile.write(json_object)
-            else:
-                logging.info(f"{key} file already exists")
-        else:
-            logging.warning(f"Missing {key} value to create the files")
+def create_def_files(user_dict: Dict) -> bool:
+    """
+    Create default configuration files for SCM.
+    
+    Args:
+        user_dict: Dictionary containing file configuration
+        
+    Returns:
+        True if all files were created successfully, False otherwise
+    """
+    for file_key in CONFIG_FILES:
+        logging.info(f"Creating files {file_key}")
+        file_name = user_dict.get(file_key)
+        
+        if not file_name:
+            logging.warning(f"Missing {file_key} value to create the files")
             return False
+            
+        if os.path.exists(file_name):
+            logging.info(f"{file_key} file already exists")
+            continue
+            
+        if file_key == constants.CONFIG_DEF_FILE_KEY:
+            # Create default TOML file
+            file_path = os.path.join(
+                user_dict[constants.CONFIG_DIR_KEY],
+                file_name
+            )
+            Path(file_path).touch()
+        else:
+            # Create hash configuration file with empty JSON
+            hash_file_path = os.path.join(
+                user_dict[constants.CONFIG_HASH_DIR_KEY],
+                file_name
+            )
+            if not os.path.exists(hash_file_path):
+                Path(hash_file_path).touch()
+                # Write empty JSON object
+                with open(hash_file_path, "w") as outfile:
+                    json.dump({}, outfile, indent=4)
 
     return True
 
 
-def check_if_recipe_exists(recipe) -> bool:
-    return os.path.exists(
-        os.path.join(os.getcwd(), os.environ['ROOT_PATH_FOR_DYNACONF'],
-                     f"{recipe}.toml"))
+def check_if_recipe_exists(recipe: str) -> bool:
+    """
+    Check if a recipe configuration file exists.
+    
+    Args:
+        recipe: Name of the recipe to check
+        
+    Returns:
+        True if the recipe file exists, False otherwise
+    """
+    recipe_path = os.path.join(
+        os.getcwd(),
+        os.environ[constants.ENV_ROOT_PATH],
+        f"{recipe}{constants.EXT_TOML}"
+    )
+    return os.path.exists(recipe_path)
 
-def del_recipe_file(recipe) -> None:
-    return os.remove(os.path.join(os.getcwd(), os.environ['ROOT_PATH_FOR_DYNACONF'],
-                     f"{recipe}.toml"))
 
-def get_user_settings(recipe, validator=None, environments=True) -> Dict:
-    return Dynaconf(settings_files=[f"{recipe}.toml"], validators=validator)
+def del_recipe_file(recipe: str) -> None:
+    """
+    Delete a recipe configuration file.
+    
+    Args:
+        recipe: Name of the recipe to delete
+    """
+    recipe_path = os.path.join(
+        os.getcwd(),
+        os.environ[constants.ENV_ROOT_PATH],
+        f"{recipe}{constants.EXT_TOML}"
+    )
+    os.remove(recipe_path)
 
 
-def get_user_defined_resources(settings) -> Set:
-    return (OrderedSet([*settings]) - defaults.DEFAULT_PARAMTERS)
+def get_user_settings(recipe: str, validator=None, environments: bool = True) -> Dict:
+    """
+    Load user settings from a recipe configuration file.
+    
+    Args:
+        recipe: Name of the recipe to load
+        validator: Optional validator for the settings
+        environments: Whether to enable environment support
+        
+    Returns:
+        Dictionary containing the user settings
+    """
+    return Dynaconf(
+        settings_files=[f"{recipe}{constants.EXT_TOML}"],
+        validators=validator
+    )
 
 
-def validate_unsupported_resources(user_resources) -> Set:
-    unsupported_resources = (
-        {*user_resources} - defaults.DEFAULT_PARAMTERS) - defaults.SUPP_RES
-    return unsupported_resources
+def get_user_defined_resources(settings: Dict) -> Set:
+    """
+    Extract user-defined resources from settings, excluding Dynaconf parameters.
+    
+    Args:
+        settings: Settings dictionary to parse
+        
+    Returns:
+        Set of user-defined resource names
+    """
+    return OrderedSet([*settings]) - defaults.DEFAULT_PARAMTERS
+
+
+def validate_unsupported_resources(user_resources: Set) -> Set:
+    """
+    Identify any unsupported resources in the user configuration.
+    
+    Args:
+        user_resources: Set of user-defined resources
+        
+    Returns:
+        Set of unsupported resource names
+    """
+    unsupported = (
+        {*user_resources} - defaults.DEFAULT_PARAMTERS
+    ) - defaults.SUPP_RES
+    return unsupported
 
 
 def gen_command(
         settings_dict: Dict,
-        key: str,
-        output: List) -> None:
-    """Function to the generate the OS commands by reading the settings_dict and update the input list format"""
-    if key.upper() in ["SERVICE"]:
-        for index, value in settings_dict[key].items():
-            output[f"{key}.{index}"] = []
-            if isinstance(
-                    value, DynaBox) and index != "params":
-                for n in value['name']:
-                    for act in value['action']:
-                        if act in defaults.SERVICE_SETUP_ACTIONS:
-                            output[f"{key}.{index}"].append("sudo apt-get update -y")
-                            output[f"{key}.{index}"].append(f"sudo apt-get {act} {n} -y")
-                        else:
-                            if act in defaults.SERVICE_OP_ACTIONS:
-                                output[f"{key}.{index}"].append(f"systemctl {act} {n}")
+        resource_type: str,
+        output: Dict) -> None:
+    """
+    Generate OS commands from configuration settings.
+    
+    Args:
+        settings_dict: Dictionary containing resource configurations
+        resource_type: Type of resource (SERVICE, FILE, DIRECTORY, FIREWALL)
+        output: Dictionary to store generated commands (modified in-place)
+    """
+    if resource_type.upper() == constants.RESOURCE_SERVICE:
+        for resource_id, resource_config in settings_dict[resource_type].items():
+            output[f"{resource_type}.{resource_id}"] = []
+            
+            if isinstance(resource_config, DynaBox) and resource_id != constants.ATTR_PARAMS:
+                for service_name in resource_config[constants.ATTR_NAME]:
+                    for action in resource_config[constants.ATTR_ACTION]:
+                        if action in defaults.SERVICE_SETUP_ACTIONS:
+                            output[f"{resource_type}.{resource_id}"].append(
+                                f"{constants.CMD_SUDO} {constants.CMD_APT_GET} update -y"
+                            )
+                            output[f"{resource_type}.{resource_id}"].append(
+                                f"{constants.CMD_SUDO} {constants.CMD_APT_GET} {action} {service_name} -y"
+                            )
+                        elif action in defaults.SERVICE_OP_ACTIONS:
+                            output[f"{resource_type}.{resource_id}"].append(
+                                f"{constants.CMD_SYSTEMCTL} {action} {service_name}"
+                            )
+
                                
-    if key.upper() in ["DIRECTORY", "FILE"]:
-        for index, value in settings_dict[key].items():
-            output[f"{key}.{index}"] = []
-            for n in value['name']:
-                for act in value['action']:
-                    if act == "create" and value.get('content',None):
-                        for i in value['content']:
-                            if not value.get('override',None):
-                                cmd: str = f"echo '{i}' >> {n}"
-                            else:
-                                cmd:str = f"echo '{i}' > {n}"
-                            output[f"{key}.{index}"].append(cmd)
+    if resource_type.upper() in [constants.RESOURCE_DIRECTORY, constants.RESOURCE_FILE]:
+        for resource_id, resource_config in settings_dict[resource_type].items():
+            output[f"{resource_type}.{resource_id}"] = []
+            
+            for target_name in resource_config[constants.ATTR_NAME]:
+                for action in resource_config[constants.ATTR_ACTION]:
+                    # Handle file content creation
+                    if action == constants.ACTION_CREATE and resource_config.get(constants.ATTR_CONTENT):
+                        for content_line in resource_config[constants.ATTR_CONTENT]:
+                            mode = constants.FILE_MODE_WRITE if resource_config.get(constants.ATTR_OVERRIDE) else constants.FILE_MODE_APPEND
+                            cmd = f"{constants.CMD_ECHO} '{content_line}' {mode} {target_name}"
+                            output[f"{resource_type}.{resource_id}"].append(cmd)
 
-                    if act == "create" and key == "DIRECTORY":
-                        cmd: str = f"mkdir -p {n}"
-                        output[f"{key}.{index}"].append(cmd)
+                    # Handle directory creation
+                    if action == constants.ACTION_CREATE and resource_type == constants.RESOURCE_DIRECTORY:
+                        cmd = f"{constants.CMD_MKDIR} -p {target_name}"
+                        output[f"{resource_type}.{resource_id}"].append(cmd)
 
-                    if act == "create" and value['params'].get(
-                            'owner',
-                            None) and value['params'].get(
-                            'group',
-                            None):
-                        cmd: str = f"chown {value['params']['owner']}:{value['params']['group']} {n}"
-                        if value['params'].get('recurse', None) and json.loads(
-                                (value['params'].get('recurse', None)).lower()):
+                    # Handle ownership changes
+                    params = resource_config.get(constants.ATTR_PARAMS, {})
+                    owner = params.get('owner')
+                    group = params.get('group')
+                    
+                    if action == constants.ACTION_CREATE and owner and group:
+                        cmd = f"{constants.CMD_CHOWN} {owner}:{group} {target_name}"
+                        if params.get('recurse') and json.loads(str(params.get('recurse')).lower()):
                             cmd += " -R"
+                        output[f"{resource_type}.{resource_id}"].append(cmd)
 
-                        output[f"{key}.{index}"].append(cmd)
 
-
-                if value.get('notifies', None):
-                    inp_json = json.loads(
-                        value.get(
-                            'notifies',
-                            None).replace(
-                            "\'",
-                            "\""))
-                    for n in inp_json['name']:
-                        for act in inp_json['action']:
-                            if act == "install":
-                                output[f"{key}.{index}"].append(f"apt-get {act} {n} -y")
+                # Handle notifications to other resources
+                notifies_config = resource_config.get(constants.ATTR_NOTIFIES)
+                if notifies_config:
+                    notifies_json = json.loads(notifies_config.replace("\'", "\""))
+                    for notify_name in notifies_json[constants.ATTR_NAME]:
+                        for notify_action in notifies_json[constants.ATTR_ACTION]:
+                            if notify_action == constants.ACTION_INSTALL:
+                                output[f"{resource_type}.{resource_id}"].append(
+                                    f"{constants.CMD_APT_GET} {notify_action} {notify_name} -y"
+                                )
                             else:
-                                output[f"{key}.{index}"].append(f"systemctl {act} {n}")
+                                output[f"{resource_type}.{resource_id}"].append(
+                                    f"{constants.CMD_SYSTEMCTL} {notify_action} {notify_name}"
+                                )
 
-    if key.upper() in ["FIREWALL"]:
-        for index, value in settings_dict[key].items():
-            output[f"{key}.{index}"] = []
-            for n in value['name']:
-                for act in value['action']:
-                    if act == "allow":
-                        cmd: str = f"sudo ufw {act} in {n}"
-                        output[f"{key}.{index}"].append(cmd)
-                        
-                        
-    return None
+    if resource_type.upper() == constants.RESOURCE_FIREWALL:
+        for resource_id, resource_config in settings_dict[resource_type].items():
+            output[f"{resource_type}.{resource_id}"] = []
+            
+            for rule_name in resource_config[constants.ATTR_NAME]:
+                for action in resource_config[constants.ATTR_ACTION]:
+                    if action == constants.ACTION_ALLOW:
+                        cmd = f"{constants.CMD_SUDO} {constants.CMD_UFW} {action} in {rule_name}"
+                        output[f"{resource_type}.{resource_id}"].append(cmd)
 
 
-def _get_diff_hash(existing_hash, curr_hash) -> List:
-    output = []
-    if existing_hash:
-        res = DeepDiff(curr_hash, existing_hash)
-        for i in JSON_DIFF_ATTR:
-            if res.get(i, None):
-                for split_val in res.get(i, None):
-                    first_idx = split_val.find('[')
-                    last_idx = split_val.find(']')
-                    split_val = split_val[first_idx+1:last_idx]
-                    output.append(split_val.replace("'",""))
-
-    else:
-        output = (list(curr_hash.keys()))
+def _get_diff_hash(existing_hash: Dict, current_hash: Dict) -> List[str]:
+    """
+    Compare two hash dictionaries and return the list of changed keys.
+    
+    Args:
+        existing_hash: Previously stored hash values
+        current_hash: Current hash values to compare
         
-    return output
+    Returns:
+        List of keys that have changed or are new
+    """
+    changed_keys = []
+    
+    if existing_hash:
+        diff_result = DeepDiff(current_hash, existing_hash)
+        for diff_type in JSON_DIFF_ATTR:
+            if diff_result.get(diff_type):
+                for change_path in diff_result.get(diff_type):
+                    # Extract the key from the path string
+                    start_bracket = change_path.find('[')
+                    end_bracket = change_path.find(']')
+                    if start_bracket != -1 and end_bracket != -1:
+                        key = change_path[start_bracket + 1:end_bracket]
+                        changed_keys.append(key.replace("'", ""))
+    else:
+        # No existing hash means all keys are new
+        changed_keys = list(current_hash.keys())
+        
+    return changed_keys
 
-def run_os_command(command) -> None: 
-    try: 
-        commands = shlex.split(command)
-        if commands[0] == "echo":
-            if commands[2] == ">>":
-                f = open(commands[-1], mode="a")
-            else:
-                f = open(commands[-1], mode="w")
-            code = check_call(commands[:2], stderr=STDOUT, stdout=f)
-        else:            
-            code = check_call(commands, stderr=STDOUT) 
-    except CalledProcessError as e:
-        logging.error(str(e))
-        code = 1 
-    return code 
+
+def run_os_command(command: str) -> int:
+    """
+    Execute an OS command safely.
+    
+    Args:
+        command: Shell command to execute
+        
+    Returns:
+        Exit code (0 for success, 1 for failure)
+    """
+    try:
+        command_parts = shlex.split(command)
+        
+        # Special handling for echo commands to redirect output to files
+        if command_parts[0] == constants.CMD_ECHO:
+            mode = "a" if command_parts[2] == constants.FILE_MODE_APPEND else "w"
+            with open(command_parts[-1], mode=mode) as output_file:
+                exit_code = check_call(command_parts[:2], stderr=STDOUT, stdout=output_file)
+        else:
+            exit_code = check_call(command_parts, stderr=STDOUT)
+            
+        return exit_code
+        
+    except CalledProcessError as error:
+        logging.error(f"Command failed: {error}")
+        return 1 
 
 
