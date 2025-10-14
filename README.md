@@ -1,15 +1,42 @@
-# SCM
-Self Managed Configuration Management(SCM) is a simple command line app for configuration management, written in python.
-> Designed to run only on ubuntu operating system
+# SCM Platform - Enterprise Configuration Management & Orchestration
 
-This tool, currently supports below resources 
-* service
-* directory
-* file 
-* firewall
->A resource definition in scm is directly related to the action of standard linux commands, example. service, directories, files.
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/sairepalletech/scm_project/releases)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/)
 
->pre-requisites install python 3.6 & above environment on the machine
+## Overview
+
+**SCM Platform** is evolving from a simple configuration management tool into an **enterprise-ready orchestration platform** that integrates with 100+ external systems across SCM, CI/CD, cloud, security, observability, and ITSM domains.
+
+### Vision
+
+Transform scm_project into a scalable, secure, extensible platform—similar to Ansible or Chef—that orchestrates and reconciles state across infrastructure and tooling through a declarative workflow DSL and modular plugin system.
+
+### Current State (v1.0.0)
+
+A lightweight Python CLI tool for configuration management on Ubuntu:
+- **Resources**: service, directory, file, firewall
+- **Format**: TOML-based recipes
+- **Execution**: Local command execution
+- **Focus**: Ubuntu operating system
+
+### Future State (v2.0+)
+
+An enterprise platform with:
+- 🔌 **100+ Integrations** via plugin system (GitHub, GitLab, AWS, Azure, Jenkins, etc.)
+- 🎯 **Declarative Workflows** in YAML with idempotent operations
+- 🏗️ **Control Plane + Runners** architecture for distributed execution
+- 🔐 **Enterprise Security** (OIDC/SAML SSO, RBAC, secrets management, signed artifacts)
+- 📊 **Full Observability** (metrics, tracing, audit logs)
+- ☸️ **Cloud-Native** deployment on Kubernetes with HA
+- 🌍 **Multi-Tenancy** with organization/project isolation
+- 📜 **Policy Engine** (OPA) for compliance and governance
+
+## Quick Start (v1.0.0 - Current)
+
+### Prerequisites
+- Python 3.6 or higher
+- Ubuntu operating system
 
 # Installation
 ```bash
@@ -20,12 +47,13 @@ cd /root/scm
 pip3 install scm-config
 scm -v 
 ```
-# Usage
+# CLI Reference (v1.0.0)
+
 ```bash
 Usage: scm [OPTIONS] COMMAND [ARGS]...
 
 Options:
-  -v, --version                   Display''s the application version
+  -v, --version                   Display's the application version
   --install-completion [bash|zsh|fish|powershell|pwsh]
                                   Install completion for the specified shell.
   --show-completion [bash|zsh|fish|powershell|pwsh]
@@ -34,15 +62,22 @@ Options:
   --help                          Show this message and exit.
 
 Commands:
-  create
-  diff
-  info
-  init
-  push
-  remove
-  validate
+  create    Create a new recipe configuration file
+  diff      Show differences between current and desired state
+  info      Display recipe information
+  init      Initialize SCM configuration directories
+  push      Apply recipe configuration to the system
+  remove    Remove recipe and its configuration
+  validate  Validate recipe syntax and configuration
 ```
->> scm creates two directories in the root directory during the "init" command, for example "/root/scm", one is for storing the recipe configuration and other one is for maintaining the configuration in the hash format, this mechanism provides the scm to run any number of times without worrying about the failures.
+
+### How It Works
+
+SCM creates two directories during initialization (e.g., `/root/scm`):
+1. **config/** - Stores recipe TOML files
+2. **config_hash/** - Maintains configuration hashes for idempotency
+
+This mechanism ensures SCM can run multiple times safely without failures or duplicate operations.
 
 ## Example workflow for Apache+PHP configuration(After the installation)
 
@@ -393,3 +428,152 @@ scm remove --recipe apache_remove
 [INFO][04-25-2022 02:33:38]::apache_remove recipe file is valid for push, use `scm diff` to differences with the existing configuration
 [INFO][04-25-2022 02:33:38]::Configuration doesn't remove the recipe file, please clean up manually
 ```
+
+---
+
+## 🚀 Enterprise Transformation (v2.0+)
+
+SCM Platform is evolving into an enterprise-ready orchestration platform. This transformation is guided by comprehensive documentation and a phased roadmap.
+
+### 📚 Documentation
+
+Explore the complete enterprise architecture and implementation plans:
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Enterprise architecture, reference design, security model, and deployment patterns
+- **[ROADMAP.md](ROADMAP.md)** - 4-quarter implementation plan with milestones and deliverables
+- **[docs/plugins/PLUGIN_SYSTEM.md](docs/plugins/PLUGIN_SYSTEM.md)** - Plugin architecture, SPI specification, and developer guide
+- **[docs/architecture/WORKFLOW_DSL.md](docs/architecture/WORKFLOW_DSL.md)** - Declarative workflow DSL specification and examples
+- **[docs/deployment/KUBERNETES.md](docs/deployment/KUBERNETES.md)** - Production Kubernetes deployment guide
+
+### 🎯 Key Features (Planned)
+
+#### Plugin System
+- **100+ Integrations** across SCM, CI/CD, cloud, security, and observability
+- **OCI-packaged plugins** with signing and SBOM
+- **Multiple isolation modes**: gRPC (out-of-process) and WASM (sandbox)
+- **Go/Python/Node.js SDKs** for plugin development
+- **Verification program** with conformance testing
+
+#### Workflow DSL
+```yaml
+apiVersion: workflows.scm.dev/v1
+kind: Workflow
+metadata:
+  name: bootstrap-organization
+spec:
+  triggers:
+    - type: webhook
+      source: github
+      events: [repository.created]
+  
+  steps:
+    - name: create-repos
+      uses: github.repos:create
+      with:
+        org: ${{ inputs.org_name }}
+        repos:
+          - name: platform-api
+            visibility: private
+    
+    - name: setup-protection
+      uses: github.repos:branch_protection
+      with:
+        org: ${{ inputs.org_name }}
+        repo: platform-api
+        rules:
+          require_reviews: 2
+```
+
+#### Enterprise Features
+- **Control Plane + Runners** architecture for distributed execution
+- **Multi-tenancy** with organization/project/environment hierarchy
+- **OIDC/SAML SSO** authentication
+- **RBAC/ABAC** authorization with fine-grained permissions
+- **Policy engine** (OPA) for compliance and governance
+- **Secrets management** via Vault/AWS/Azure/GCP
+- **Full observability** with metrics, tracing, and audit logs
+- **High availability** with multi-AZ Kubernetes deployment
+
+#### Developer Experience
+```bash
+# Initialize new plugin
+scm plugin init github --type connector --lang go
+
+# Test plugin
+scm plugin test --manifest manifest.yaml
+
+# Publish to registry
+scm plugin publish ghcr.io/org/github:v1.0.0
+
+# Validate workflow
+scm workflow validate my-workflow.yaml
+
+# Preview changes (dry-run)
+scm workflow plan my-workflow.yaml --input org=acme
+```
+
+### 📅 Implementation Timeline
+
+| Quarter | Version | Focus | Integrations |
+|---------|---------|-------|--------------|
+| **Q1** | v2.0.0 | Foundations - Core platform + plugin system MVP | 5 |
+| **Q2** | v2.1.0 | Scale - Performance + developer experience | 15 |
+| **Q3** | v2.2.0 | Enterprise - Multi-tenancy + security | 35 |
+| **Q4** | v3.0.0 | Ecosystem - Marketplace + community | 50+ |
+
+### 🏗️ Current Focus (Q1)
+
+Phase 1 establishes the foundation:
+- [x] Architecture documentation (ARCHITECTURE.md)
+- [x] Roadmap planning (ROADMAP.md)
+- [x] Plugin system design (PLUGIN_SYSTEM.md)
+- [x] Workflow DSL specification (WORKFLOW_DSL.md)
+- [x] Deployment guides (KUBERNETES.md)
+- [ ] Core API implementation (REST + gRPC)
+- [ ] Orchestrator and scheduler
+- [ ] Plugin SDK (Go)
+- [ ] First 5 integrations (GitHub, GitLab, Slack, Service, File)
+
+### 🤝 Contributing
+
+We welcome contributions to this transformation:
+- **Architecture feedback**: Review design documents and provide input
+- **Plugin development**: Build integrations using the plugin SDK
+- **Documentation**: Improve guides and examples
+- **Testing**: Help with conformance tests and benchmarks
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines (coming soon).
+
+### 📖 Migration Path
+
+**Backward Compatibility**: The current v1.0.0 TOML-based recipes will continue to work. We'll provide:
+- Compatibility bridge for existing recipes
+- Migration tools from TOML to new YAML DSL
+- Long-term support for v1.0.0 format
+- Gradual migration guides
+
+### 🔗 Resources
+
+- **Documentation**: [docs/](docs/)
+- **Architecture Diagrams**: [ARCHITECTURE.md](ARCHITECTURE.md)
+- **Plugin Examples**: [examples/](examples/) (coming soon)
+- **Community**: GitHub Discussions (coming soon)
+
+### 📊 Project Status
+
+**Current Release**: v1.0.0 (Stable - Configuration Management CLI)
+**Next Release**: v2.0.0 (Planned - Enterprise Platform Foundation)
+**Maturity**: Early planning and design phase
+**License**: MIT
+
+---
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Built with Python, Typer, and Dynaconf
+- Inspired by Ansible, Chef, and Kubernetes ecosystem
+- Community feedback and contributions
