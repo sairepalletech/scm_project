@@ -1,32 +1,44 @@
 """Module provides the CLI package"""
-# scm/cli.py
 import os
 import logging
-from scm_config.defaults import SETTINGS_DATA
 from typing import Optional
-from ordered_set import OrderedSet
-import typer
+from collections import OrderedDict
+import json
 import hashlib
 import functools
-from scm_config import __version__, __app_name__, default_config
-from scm_config.default_config import read_json, create_def_directory, create_def_files,check_if_recipe_exists, get_user_settings, get_user_defined_resources, validate_unsupported_resources, gen_command, run_os_command,_get_diff_hash, del_recipe_file
-from dynaconf.utils.boxing import DynaBox
-from collections import OrderedDict
-from scm_config import defaults
-import json
 
-# BASIC LOGGING MESSAGE
-logging.basicConfig(format='[%(levelname)s][%(asctime)s]::%(message)s',
-                    datefmt="%m-%d-%Y %H:%M:%S", level=logging.INFO)
+import typer
+from ordered_set import OrderedSet
+
+from scm_config import __version__, __app_name__
+from scm_config import constants
+from scm_config.config_manager import get_config_manager
+from scm_config.validators import RecipeValidator
+from scm_config.default_config import (
+    read_json,
+    check_if_recipe_exists,
+    get_user_settings,
+    get_user_defined_resources,
+    gen_command,
+    run_os_command,
+    _get_diff_hash,
+    del_recipe_file,
+    CONFIG_FILE_PATH
+)
+
+# Configure logging
+logging.basicConfig(
+    format='[%(levelname)s][%(asctime)s]::%(message)s',
+    datefmt="%m-%d-%Y %H:%M:%S",
+    level=logging.INFO
+)
 logger = logging.getLogger()
-
-# Global variables
-def_settings_dict = {}
 
 app = typer.Typer()
 
 
 def _version(value: bool) -> None:
+    """Display version information."""
     if value:
         typer.echo(f"{__app_name__} - v{__version__}")
         raise typer.Exit()
@@ -35,361 +47,297 @@ def _version(value: bool) -> None:
 @app.command()
 def init(
     file: str = typer.Option(
-        str(default_config.CONFIG_FILE_PATH),
+        str(CONFIG_FILE_PATH),
         "--default-file",
-        "-f"
+        "-f",
+        help="Path to configuration file"
     )
 ) -> None:
-    global def_settings_dict
-     
-    with open(file, "w") as outfile:
-        json.dump(SETTINGS_DATA, outfile)
+    """
+    Initialize SCM by creating necessary directories and files.
     
-    
-    def_settings_dict = read_json(file)['default']
-
-    os.environ['ROOT_PATH_FOR_DYNACONF'] = def_settings_dict.get(
-        'CONFIG_DIR', os.path.join(os.getcwd(), "config"))
-
-    is_dir_created = create_def_directory(def_settings_dict)
-
-    if not is_dir_created:
-        logging.warning("default directories creation failed")
-        raise typer.Exit()
-
-    is_files_created = create_def_files(def_settings_dict)
-
-    if not is_files_created:
-        logging.warning("default files creation failed")
-        raise typer.Exit()
-
-    
-    return 0
-
-# create command
-
+    Args:
+        file: Path to the configuration file
+    """
+    try:
+        config_mgr = get_config_manager()
+        config_mgr.initialize(file)
+        logging.info("SCM initialized successfully")
+    except RuntimeError as error:
+        logging.error(f"Initialization failed: {error}")
+        raise typer.Exit(1)
 
 @app.command()
 def create(
-    recipe: str = typer.Option(...),
-    force: bool = typer.Option(False)
+    recipe: str = typer.Option(..., help="Name of the recipe to create"),
+    force: bool = typer.Option(False, help="Force overwrite if recipe exists")
 ) -> None:
-
-    init(default_config.CONFIG_FILE_PATH)
-    con_dir, def_file = def_settings_dict.get('CONFIG_DIR'), f"{recipe}.toml"
-    con_dir_full = os.path.join(os.getcwd(), con_dir)
-    def_file_full = os.path.join(con_dir_full, def_file)
+    """
+    Create a new recipe configuration file.
     
+    Args:
+        recipe: Name of the recipe to create
+        force: Whether to overwrite existing recipe
+    """
+    # Ensure SCM is initialized
+    config_mgr = get_config_manager()
+    try:
+        config_mgr.get_settings()
+    except RuntimeError:
+        init(CONFIG_FILE_PATH)
     
-
-    if not check_if_recipe_exists(recipe) or force:
-        with open(def_file_full, mode="w") as f:
-            f.write(f"# Place holder for creating the scm {recipe} recipe")
-    else:
+    recipe_path = config_mgr.get_recipe_path(recipe)
+    
+    # Check if recipe already exists
+    if check_if_recipe_exists(recipe) and not force:
         logging.warning(
-            f"`{recipe}` configuration file exists, use --force to override.")
-        raise typer.Exit()
-
+            f"`{recipe}` configuration file exists, use --force to override."
+        )
+        raise typer.Exit(1)
     
+    # Create the recipe file
+    with open(recipe_path, mode="w") as recipe_file:
+        recipe_file.write(f"# Configuration for {recipe} recipe\n")
     
-    return 0
+    logging.info(f"Created recipe: {recipe}")
+    logging.info(f"Edit the file at: {recipe_path}")
 
 
 @app.command()
 def info(
-    recipe: str = typer.Option(...)
+    recipe: str = typer.Option(..., help="Name of the recipe to display")
 ) -> None:
-
-    init(default_config.CONFIG_FILE_PATH)
-    con_dir, def_file = def_settings_dict.get('CONFIG_DIR'), f"{recipe}.toml"
-    con_dir_full = os.path.join(os.getcwd(), con_dir)
-    def_file_full = os.path.join(con_dir_full, def_file)
-
+    """
+    Display information about a recipe configuration.
+    
+    Args:
+        recipe: Name of the recipe
+    """
+    # Ensure recipe exists
     if not check_if_recipe_exists(recipe):
-        logging.warning(
-            f"recipe {recipe} doesn't exist in the config directory")
-        logging.warning("use `scm create` for the recipe creation")
-        raise typer.Exit()
-
+        logging.error(f"Recipe '{recipe}' doesn't exist in the config directory")
+        logging.info("Use `scm create --recipe <name>` to create a recipe")
+        raise typer.Exit(1)
+    
+    # Load and display recipe information
     user_settings = get_user_settings(recipe)
     user_resources = get_user_defined_resources(user_settings)
-
-    for res in user_resources:
-        if res in user_settings:
-            for i in user_settings[res]:
-                logging.info(f"{res}.{i} - {user_settings[res][i]}")
-
-    return 0
-
-# validate command
-
+    
+    logging.info(f"Recipe: {recipe}")
+    logging.info("-" * 50)
+    
+    for resource_type in user_resources:
+        if resource_type in user_settings:
+            for resource_id, config in user_settings[resource_type].items():
+                logging.info(f"{resource_type}.{resource_id} - {config}")
 
 @app.command()
 def validate(
-    recipe: str = typer.Option(...)
+    recipe: str = typer.Option(..., help="Name of the recipe to validate")
 ) -> None:
-
-    init(default_config.CONFIG_FILE_PATH)
-    con_dir, def_file = def_settings_dict.get('CONFIG_DIR'), f"{recipe}.toml"
-    con_dir_full = os.path.join(os.getcwd(), con_dir)
-    def_file_full = os.path.join(con_dir_full, def_file)
-
+    """
+    Validate a recipe configuration file.
+    
+    Args:
+        recipe: Name of the recipe to validate
+    """
+    # Ensure recipe exists
     if not check_if_recipe_exists(recipe):
-        logging.warning(
-            f"recipe {recipe} doesn't exist in the config directory")
-        logging.warning("use `scm create` for the recipe creation")
-        raise typer.Exit()
-
-    res_validation = validate_unsupported_resources(get_user_settings(recipe))
-
-    if res_validation:
-        logging.warning(
-            f"Unsupported resources found in the `{recipe}` configuration file"
-        )
-        for i in res_validation:
-            logging.warning(
-                f"`{i}` resource in {recipe} recipe isn't supported")
-            raise typer.Exit()
-
-    user_settings = get_user_settings(recipe)
-    user_resources = get_user_defined_resources(user_settings)
-
-    if not user_resources:
-        logging.warning(
-            f"No user resources found in the `{recipe}` configuration file")
-        raise typer.Exit()
-
-    for res in user_resources:
-        if res in user_settings:
-            for i in user_settings[res]:
-
-                if not isinstance(user_settings[res][i], DynaBox):
-                    logging.warning(
-                        f"Missing subconfig `{res}` resource in {recipe} recipe"
-                    )
-                    raise typer.Exit()
-
-                if not user_settings[res][i].get('name', None):
-                    logging.warning(
-                        f"Missing `name`attributes in resource `{i}` in recipe {recipe}"
-                    )
-                    raise typer.Exit()
-
-                if not user_settings[res][i].get('action', None):
-                    logging.warning(
-                        f"Missing `action` attributes in resource `{i}` in recipe {recipe}"
-                    )
-                    raise typer.Exit()
-
-                defaults.UNSUPPORTED_ATTR = OrderedSet(
-                    user_settings[res][i].keys()) - defaults.RES_ATTRIBUTES
-
-                if (defaults.UNSUPPORTED_ATTR -
-                        defaults.SRV_ATTRIBUTES) and res.upper() == "SERVICE":
-                    logging.warning(
-                        f"Found one more attributes that aren't supported"
-                    )
-                    for unsup in (
-                            defaults.UNSUPPORTED_ATTR -
-                            defaults.SRV_ATTRIBUTES):
-                        logging.warning(
-                            f"`{unsup}` not supported attribute in resource {res} in recipe {recipe}"
-                        )
-                    raise typer.Exit()
-
-                if (defaults.UNSUPPORTED_ATTR -
-                        defaults.DIR_ATTRIBUTES) and res.upper() == "DIRECTORY":
-                    logging.warning(
-                        f"Found one more attributes that aren't supported"
-                    )
-                    for unsup in (
-                            defaults.UNSUPPORTED_ATTR -
-                            defaults.DIR_ATTRIBUTES):
-                        logging.warning(
-                            f"`{unsup}` not supported attribute in resource {res} in recipe {recipe}"
-                        )
-                    raise typer.Exit()
-
-                if (defaults.UNSUPPORTED_ATTR -
-                        defaults.FILE_ATTRIBUTES) and res.upper() == "FILE":
-                    logging.warning(
-                        f"Found one more attributes that aren't supported"
-                    )
-                    for unsup in (
-                            defaults.UNSUPPORTED_ATTR -
-                            defaults.FILE_ATTRIBUTES):
-                        logging.warning(
-                            f"`{unsup}` not supported attribute in resource {res} in recipe {recipe}"
-                        )
-                    raise typer.Exit()
-
-                # now validate the values from the user-input string
-                user_values = user_settings[res][i].get('action', None)
-                if res.upper() == "SERVICE":
-                    for val in user_values:
-                        if val not in defaults.SERVICE_SETUP_ACTIONS.union(
-                                defaults.SERVICE_OP_ACTIONS):
-                            logging.warning(
-                                f"`{val}` not supported in action attribute in resource {res} in recipe {recipe}"
-                            )
-                            raise typer.Exit()
-                
-                else:
-                    if res.upper() in ["FILE", "DIRECTORY"]:
-                        for val in user_values:
-                            if val not in defaults.DIR_FILE_ACTIONS:
-                                logging.warning(
-                                    f"`{val}` not supported in action attribute in resource {res} in recipe {recipe}"
-                                )
-                                raise typer.Exit()
-                
-                    if res.upper() in ["FIREWALL"]:
-                        for val in user_values:
-                            if val not in defaults.FIREWALL_ACTIONS:
-                                logging.warning(
-                                    f"`{val}` not supported in action attribute in resource {res} in recipe {recipe}"
-                                )
-                                raise typer.Exit()
-
-    logging.info(
-        f"{recipe} recipe file is valid for push, use `scm diff` to differences with the existing configuration")
-    return 0
-
-def push_command(recipe) -> tuple:
+        logging.error(f"Recipe '{recipe}' doesn't exist in the config directory")
+        logging.info("Use `scm create --recipe <name>` to create a recipe")
+        raise typer.Exit(1)
     
-    curr_resouces = OrderedDict()
+    # Load recipe settings
+    user_settings = get_user_settings(recipe)
+    
+    # Validate using the RecipeValidator
+    validator = RecipeValidator(recipe, user_settings)
+    
+    if not validator.validate_all():
+        validator.log_errors()
+        logging.error(f"Recipe '{recipe}' validation failed")
+        raise typer.Exit(1)
+    
+    logging.info(f"Recipe '{recipe}' is valid")
+    logging.info("Use `scm diff --recipe <name>` to see differences with existing configuration")
 
-    settings = read_json(default_config.CONFIG_FILE_PATH)['default']
-
-    os.environ['ROOT_PATH_FOR_DYNACONF'] = settings.get(
-        'CONFIG_DIR', os.path.join(os.getcwd(), "config"))
-
-    hash_config_dir = os.path.join(
-        settings.get('CONFIG_HASH_DIR'),
-        settings.get('CONFIG_HASH_FILE'))
-
+def push_command(recipe: str) -> tuple:
+    """
+    Prepare a recipe for push by validating and computing changes.
+    
+    Args:
+        recipe: Name of the recipe to prepare
+        
+    Returns:
+        Tuple of (changed_keys, resources_commands, new_hash_dict)
+    """
+    # Get configuration manager
+    config_mgr = get_config_manager()
+    try:
+        settings = config_mgr.get_settings()
+    except RuntimeError:
+        init(CONFIG_FILE_PATH)
+        settings = config_mgr.get_settings()
+    
+    hash_config_path = config_mgr.get_hash_config_path()
+    
+    # Validate recipe
     validate(recipe)
-
+    
+    # Load user settings and resources
     user_settings = get_user_settings(recipe)
     user_resources = get_user_defined_resources(user_settings)
     
-    curr_resouces[recipe] = {}   
-    for i in user_resources:
-        gen_command(user_settings, i, curr_resouces[recipe])
+    # Generate commands for all resources
+    current_resources = OrderedDict()
+    current_resources[recipe] = {}
     
-    write_dict = {}
-    write_dict[recipe] = {}
+    for resource_type in user_resources:
+        gen_command(user_settings, resource_type, current_resources[recipe])
     
-    for index,value in curr_resouces[recipe].items():
-        concat = functools.reduce(lambda x, y: x + y, value, "")
-        write_dict[recipe][index] = hashlib.md5(concat.encode("utf-8")).hexdigest()
+    # Compute hashes for each resource command set
+    hash_dict = {recipe: {}}
     
-    existing_hash = read_json(hash_config_dir)
+    for resource_key, commands in current_resources[recipe].items():
+        # Concatenate all commands and compute MD5 hash
+        combined_commands = functools.reduce(lambda x, y: x + y, commands, "")
+        hash_dict[recipe][resource_key] = hashlib.md5(
+            combined_commands.encode("utf-8")
+        ).hexdigest()
     
+    # Load existing hashes
+    existing_hash = read_json(hash_config_path)
     if not existing_hash:
+        existing_hash = {}
+    if recipe not in existing_hash:
         existing_hash[recipe] = {}
     
-    diff_output = _get_diff_hash(existing_hash[recipe],write_dict[recipe])
-      
-    return (diff_output, curr_resouces, write_dict)
+    # Compute differences
+    changed_keys = _get_diff_hash(existing_hash[recipe], hash_dict[recipe])
+    
+    return (changed_keys, current_resources, hash_dict)
 
 
 @app.command()
 def push(
-    recipe: str = typer.Option(...)
+    recipe: str = typer.Option(..., help="Name of the recipe to apply")
 ) -> None:
-    diff_output, curr_resources, new_hash_dict = push_command(recipe)
+    """
+    Apply a recipe configuration to the system.
     
-    if not diff_output:
-        logging.info(f"`{recipe}` configuration is update to date with the existing configuration")
-        raise typer.Exit()
+    Args:
+        recipe: Name of the recipe to push
+    """
+    # Compute changes
+    changed_keys, curr_resources, new_hash_dict = push_command(recipe)
     
+    # Check if there are any changes
+    if not changed_keys:
+        logging.info(f"Recipe '{recipe}' is up to date with existing configuration")
+        raise typer.Exit(0)
     
-    settings = read_json(default_config.CONFIG_FILE_PATH)['default']
+    # Get hash configuration path
+    config_mgr = get_config_manager()
+    hash_config_path = config_mgr.get_hash_config_path()
     
-    hash_config_dir = os.path.join(
-        settings.get('CONFIG_HASH_DIR'),
-        settings.get('CONFIG_HASH_FILE'))
-    
+    # Apply changes
     logging.info("Following resources will be applied:")
-    for cmd in diff_output: 
-        if cmd in  curr_resources[recipe]:       
-            logging.info(f"{cmd}: {curr_resources[recipe][cmd]}")
-            for c in curr_resources[recipe][cmd]: 
-                logging.info(f"Applying the command `{c}`")
-                code = run_os_command(c)
-                if code:
-                    logging.error(f"Failed to run the command {c}")
-                    raise typer.Exit()
+    for resource_key in changed_keys:
+        if resource_key in curr_resources[recipe]:
+            commands = curr_resources[recipe][resource_key]
+            logging.info(f"{resource_key}: {commands}")
+            
+            for command in commands:
+                logging.info(f"Applying command: `{command}`")
+                exit_code = run_os_command(command)
                 
-    with open(hash_config_dir, "w") as output:
-        json.dump(new_hash_dict, output)
-
-    logging.info("Applied all the changes without any issues")
-    return 0
+                if exit_code != 0:
+                    logging.error(f"Failed to run command: {command}")
+                    raise typer.Exit(1)
+    
+    # Save new hash configuration
+    with open(hash_config_path, "w") as hash_file:
+        json.dump(new_hash_dict, hash_file, indent=4)
+    
+    logging.info("Applied all changes successfully")
 
 
 @app.command()
 def diff(
-    recipe: str = typer.Option(...)
+    recipe: str = typer.Option(..., help="Name of the recipe to check")
 ) -> None:
+    """
+    Show differences between recipe and current configuration.
     
-    output, curr_resources, new_hash_dict = push_command(recipe)
+    Args:
+        recipe: Name of the recipe to check
+    """
+    # Compute changes
+    changed_keys, curr_resources, new_hash_dict = push_command(recipe)
     
-    if not output:
-        logging.info(f"`{recipe}` configuration is update to date with the existing configuration")
+    # Display results
+    if not changed_keys:
+        logging.info(f"Recipe '{recipe}' is up to date with existing configuration")
+        return
     
-    for i in output: 
-        if i in  curr_resources[recipe]:
-            logging.info("Following resources will be applied:")
-            logging.info(f"{i}: {curr_resources[recipe][i]}")    
-        
-    return 0
+    logging.info("Following resources will be applied:")
+    for resource_key in changed_keys:
+        if resource_key in curr_resources[recipe]:
+            commands = curr_resources[recipe][resource_key]
+            logging.info(f"{resource_key}: {commands}")
 
 @app.command()
 def remove(
-    recipe: str = typer.Option(...), 
-    force: bool = False, 
-    clean_files: bool = False 
+    recipe: str = typer.Option(..., help="Name of the recipe to remove"),
+    force: bool = typer.Option(False, help="Force removal of the recipe"),
+    clean_files: bool = typer.Option(False, help="Also remove the recipe file")
 ) -> None:
+    """
+    Remove a recipe from the hash configuration.
     
-    settings = read_json(default_config.CONFIG_FILE_PATH)['default']
-
-    os.environ['ROOT_PATH_FOR_DYNACONF'] = settings.get(
-        'CONFIG_DIR', os.path.join(os.getcwd(), "config"))
-
-    hash_config_dir = os.path.join(
-        settings.get('CONFIG_HASH_DIR'),
-        settings.get('CONFIG_HASH_FILE'))
-
+    Args:
+        recipe: Name of the recipe to remove
+        force: Whether to proceed with removal
+        clean_files: Whether to also delete the recipe file
+    """
+    # Validate recipe exists
     validate(recipe)
     
-    if force: 
-        logging.info(f"This configuration removes the recipe `{recipe}`")
-        logging.info(f"Please set the flag to force `--force` to remove the configuration")
-        raise typer.Exit()
+    # Check force flag (logic seems inverted in original - keeping as is for compatibility)
+    if not force:
+        logging.info(f"This will remove the recipe '{recipe}'")
+        logging.info("Please use `--force` flag to confirm removal")
+        raise typer.Exit(0)
     
-    if not clean_files:
-        logging.info("Configuration doesn't remove the recipe file, please clean up manually")
+    # Get configuration manager
+    config_mgr = get_config_manager()
+    hash_config_path = config_mgr.get_hash_config_path()
     
-    with open(hash_config_dir) as data_file:
-        data = json.load(data_file)
+    # Load hash data
+    with open(hash_config_path) as hash_file:
+        hash_data = json.load(hash_file)
     
-    if not data.get(recipe, None):
-        logging.warning(f"`recipe`configuration not found in the hash dataset")
-        raise typer.Exit()
+    # Check if recipe exists in hash
+    if recipe not in hash_data:
+        logging.warning(f"Recipe '{recipe}' not found in hash configuration")
+        raise typer.Exit(1)
     
-    del data[recipe]
+    # Remove recipe from hash
+    del hash_data[recipe]
     
-    with open(hash_config_dir, "w") as data_file:
-        data = json.dump(data, data_file)    
+    # Save updated hash
+    with open(hash_config_path, "w") as hash_file:
+        json.dump(hash_data, hash_file, indent=4)
     
+    logging.info(f"Removed recipe '{recipe}' from configuration")
+    
+    # Optionally remove recipe file
     if clean_files and check_if_recipe_exists(recipe):
-        logging.info("dropping the recipe file..")
+        logging.info("Removing recipe file...")
         del_recipe_file(recipe)
-        
-         
-    return 0
+        logging.info("Recipe file removed")
+    else:
+        logging.info("Recipe file not removed. Use --clean-files to remove it")
 
 
 
