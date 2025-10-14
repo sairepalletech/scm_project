@@ -9,7 +9,7 @@ import typer
 import hashlib
 import functools
 from scm_config import __version__, __app_name__, default_config
-from scm_config.default_config import read_json, create_def_directory, create_def_files,check_if_receipe_exists, get_user_settings, get_user_defined_resources, validate_unsupported_resources, gen_command, run_os_command,_get_diff_hash, del_receipe_file
+from scm_config.default_config import read_json, create_def_directory, create_def_files,check_if_recipe_exists, get_user_settings, get_user_defined_resources, validate_unsupported_resources, gen_command, run_os_command,_get_diff_hash, del_recipe_file
 from dynaconf.utils.boxing import DynaBox
 from collections import OrderedDict
 from scm_config import defaults
@@ -71,23 +71,23 @@ def init(
 
 @app.command()
 def create(
-    receipe: str = typer.Option(...),
+    recipe: str = typer.Option(...),
     force: bool = typer.Option(False)
 ) -> None:
 
     init(default_config.CONFIG_FILE_PATH)
-    con_dir, def_file = def_settings_dict.get('CONFIG_DIR'), f"{receipe}.toml"
+    con_dir, def_file = def_settings_dict.get('CONFIG_DIR'), f"{recipe}.toml"
     con_dir_full = os.path.join(os.getcwd(), con_dir)
     def_file_full = os.path.join(con_dir_full, def_file)
     
     
 
-    if not check_if_receipe_exists(receipe) or force:
+    if not check_if_recipe_exists(recipe) or force:
         with open(def_file_full, mode="w") as f:
-            f.write(f"# Place holder for creating the scm {receipe} receipe")
+            f.write(f"# Place holder for creating the scm {recipe} recipe")
     else:
         logging.warning(
-            f"`{receipe}` configuration file exists, use --force to override.")
+            f"`{recipe}` configuration file exists, use --force to override.")
         raise typer.Exit()
 
     
@@ -97,21 +97,21 @@ def create(
 
 @app.command()
 def info(
-    receipe: str = typer.Option(...)
+    recipe: str = typer.Option(...)
 ) -> None:
 
     init(default_config.CONFIG_FILE_PATH)
-    con_dir, def_file = def_settings_dict.get('CONFIG_DIR'), f"{receipe}.toml"
+    con_dir, def_file = def_settings_dict.get('CONFIG_DIR'), f"{recipe}.toml"
     con_dir_full = os.path.join(os.getcwd(), con_dir)
     def_file_full = os.path.join(con_dir_full, def_file)
 
-    if not check_if_receipe_exists(receipe):
+    if not check_if_recipe_exists(recipe):
         logging.warning(
-            f"receipe {receipe} doesn't exist in the config directory")
-        logging.warning("use `scm create` for the receipe creation")
+            f"recipe {recipe} doesn't exist in the config directory")
+        logging.warning("use `scm create` for the recipe creation")
         raise typer.Exit()
 
-    user_settings = get_user_settings(receipe)
+    user_settings = get_user_settings(recipe)
     user_resources = get_user_defined_resources(user_settings)
 
     for res in user_resources:
@@ -126,37 +126,37 @@ def info(
 
 @app.command()
 def validate(
-    receipe: str = typer.Option(...)
+    recipe: str = typer.Option(...)
 ) -> None:
 
     init(default_config.CONFIG_FILE_PATH)
-    con_dir, def_file = def_settings_dict.get('CONFIG_DIR'), f"{receipe}.toml"
+    con_dir, def_file = def_settings_dict.get('CONFIG_DIR'), f"{recipe}.toml"
     con_dir_full = os.path.join(os.getcwd(), con_dir)
     def_file_full = os.path.join(con_dir_full, def_file)
 
-    if not check_if_receipe_exists(receipe):
+    if not check_if_recipe_exists(recipe):
         logging.warning(
-            f"receipe {receipe} doesn't exist in the config directory")
-        logging.warning("use `scm create` for the receipe creation")
+            f"recipe {recipe} doesn't exist in the config directory")
+        logging.warning("use `scm create` for the recipe creation")
         raise typer.Exit()
 
-    res_validation = validate_unsupported_resources(get_user_settings(receipe))
+    res_validation = validate_unsupported_resources(get_user_settings(recipe))
 
     if res_validation:
         logging.warning(
-            f"Unsupported resources found in the `{receipe}` configuration file"
+            f"Unsupported resources found in the `{recipe}` configuration file"
         )
         for i in res_validation:
             logging.warning(
-                f"`{i}` resource in {receipe} receipe isn't supported")
+                f"`{i}` resource in {recipe} recipe isn't supported")
             raise typer.Exit()
 
-    user_settings = get_user_settings(receipe)
+    user_settings = get_user_settings(recipe)
     user_resources = get_user_defined_resources(user_settings)
 
     if not user_resources:
         logging.warning(
-            f"No user resources found in the `{receipe}` configuration file")
+            f"No user resources found in the `{recipe}` configuration file")
         raise typer.Exit()
 
     for res in user_resources:
@@ -165,19 +165,19 @@ def validate(
 
                 if not isinstance(user_settings[res][i], DynaBox):
                     logging.warning(
-                        f"Missing subconfig `{res}` resource in {receipe} receipe"
+                        f"Missing subconfig `{res}` resource in {recipe} recipe"
                     )
                     raise typer.Exit()
 
                 if not user_settings[res][i].get('name', None):
                     logging.warning(
-                        f"Missing `name`attributes in resource `{i}` in receipe {receipe}"
+                        f"Missing `name`attributes in resource `{i}` in recipe {recipe}"
                     )
                     raise typer.Exit()
 
                 if not user_settings[res][i].get('action', None):
                     logging.warning(
-                        f"Missing `action` attributes in resource `{i}` in receipe {receipe}"
+                        f"Missing `action` attributes in resource `{i}` in recipe {recipe}"
                     )
                     raise typer.Exit()
 
@@ -193,7 +193,7 @@ def validate(
                             defaults.UNSUPPORTED_ATTR -
                             defaults.SRV_ATTRIBUTES):
                         logging.warning(
-                            f"`{unsup}` not supported attribute in resource {res} in receipe {receipe}"
+                            f"`{unsup}` not supported attribute in resource {res} in recipe {recipe}"
                         )
                     raise typer.Exit()
 
@@ -206,7 +206,7 @@ def validate(
                             defaults.UNSUPPORTED_ATTR -
                             defaults.DIR_ATTRIBUTES):
                         logging.warning(
-                            f"`{unsup}` not supported attribute in resource {res} in receipe {receipe}"
+                            f"`{unsup}` not supported attribute in resource {res} in recipe {recipe}"
                         )
                     raise typer.Exit()
 
@@ -219,7 +219,7 @@ def validate(
                             defaults.UNSUPPORTED_ATTR -
                             defaults.FILE_ATTRIBUTES):
                         logging.warning(
-                            f"`{unsup}` not supported attribute in resource {res} in receipe {receipe}"
+                            f"`{unsup}` not supported attribute in resource {res} in recipe {recipe}"
                         )
                     raise typer.Exit()
 
@@ -230,7 +230,7 @@ def validate(
                         if val not in defaults.SERVICE_SETUP_ACTIONS.union(
                                 defaults.SERVICE_OP_ACTIONS):
                             logging.warning(
-                                f"`{val}` not supported in action attribute in resource {res} in receipe {receipe}"
+                                f"`{val}` not supported in action attribute in resource {res} in recipe {recipe}"
                             )
                             raise typer.Exit()
                 
@@ -239,7 +239,7 @@ def validate(
                         for val in user_values:
                             if val not in defaults.DIR_FILE_ACTIONS:
                                 logging.warning(
-                                    f"`{val}` not supported in action attribute in resource {res} in receipe {receipe}"
+                                    f"`{val}` not supported in action attribute in resource {res} in recipe {recipe}"
                                 )
                                 raise typer.Exit()
                 
@@ -247,15 +247,15 @@ def validate(
                         for val in user_values:
                             if val not in defaults.FIREWALL_ACTIONS:
                                 logging.warning(
-                                    f"`{val}` not supported in action attribute in resource {res} in receipe {receipe}"
+                                    f"`{val}` not supported in action attribute in resource {res} in recipe {recipe}"
                                 )
                                 raise typer.Exit()
 
     logging.info(
-        f"{receipe} receipe file is valid for push, use `scm diff` to differences with the existing configuration")
+        f"{recipe} recipe file is valid for push, use `scm diff` to differences with the existing configuration")
     return 0
 
-def push_command(receipe) -> tuple:
+def push_command(recipe) -> tuple:
     
     curr_resouces = OrderedDict()
 
@@ -268,40 +268,40 @@ def push_command(receipe) -> tuple:
         settings.get('CONFIG_HASH_DIR'),
         settings.get('CONFIG_HASH_FILE'))
 
-    validate(receipe)
+    validate(recipe)
 
-    user_settings = get_user_settings(receipe)
+    user_settings = get_user_settings(recipe)
     user_resources = get_user_defined_resources(user_settings)
     
-    curr_resouces[receipe] = {}   
+    curr_resouces[recipe] = {}   
     for i in user_resources:
-        gen_command(user_settings, i, curr_resouces[receipe])
+        gen_command(user_settings, i, curr_resouces[recipe])
     
     write_dict = {}
-    write_dict[receipe] = {}
+    write_dict[recipe] = {}
     
-    for index,value in curr_resouces[receipe].items():
+    for index,value in curr_resouces[recipe].items():
         concat = functools.reduce(lambda x, y: x + y, value, "")
-        write_dict[receipe][index] = hashlib.md5(concat.encode("utf-8")).hexdigest()
+        write_dict[recipe][index] = hashlib.md5(concat.encode("utf-8")).hexdigest()
     
     existing_hash = read_json(hash_config_dir)
     
     if not existing_hash:
-        existing_hash[receipe] = {}
+        existing_hash[recipe] = {}
     
-    diff_output = _get_diff_hash(existing_hash[receipe],write_dict[receipe])
+    diff_output = _get_diff_hash(existing_hash[recipe],write_dict[recipe])
       
     return (diff_output, curr_resouces, write_dict)
 
 
 @app.command()
 def push(
-    receipe: str = typer.Option(...)
+    recipe: str = typer.Option(...)
 ) -> None:
-    diff_output, curr_resources, new_hash_dict = push_command(receipe)
+    diff_output, curr_resources, new_hash_dict = push_command(recipe)
     
     if not diff_output:
-        logging.info(f"`{receipe}` configuration is update to date with the existing configuration")
+        logging.info(f"`{recipe}` configuration is update to date with the existing configuration")
         raise typer.Exit()
     
     
@@ -313,9 +313,9 @@ def push(
     
     logging.info("Following resources will be applied:")
     for cmd in diff_output: 
-        if cmd in  curr_resources[receipe]:       
-            logging.info(f"{cmd}: {curr_resources[receipe][cmd]}")
-            for c in curr_resources[receipe][cmd]: 
+        if cmd in  curr_resources[recipe]:       
+            logging.info(f"{cmd}: {curr_resources[recipe][cmd]}")
+            for c in curr_resources[recipe][cmd]: 
                 logging.info(f"Applying the command `{c}`")
                 code = run_os_command(c)
                 if code:
@@ -331,24 +331,24 @@ def push(
 
 @app.command()
 def diff(
-    receipe: str = typer.Option(...)
+    recipe: str = typer.Option(...)
 ) -> None:
     
-    output, curr_resources, new_hash_dict = push_command(receipe)
+    output, curr_resources, new_hash_dict = push_command(recipe)
     
     if not output:
-        logging.info(f"`{receipe}` configuration is update to date with the existing configuration")
+        logging.info(f"`{recipe}` configuration is update to date with the existing configuration")
     
     for i in output: 
-        if i in  curr_resources[receipe]:
+        if i in  curr_resources[recipe]:
             logging.info("Following resources will be applied:")
-            logging.info(f"{i}: {curr_resources[receipe][i]}")    
+            logging.info(f"{i}: {curr_resources[recipe][i]}")    
         
     return 0
 
 @app.command()
 def remove(
-    receipe: str = typer.Option(...), 
+    recipe: str = typer.Option(...), 
     force: bool = False, 
     clean_files: bool = False 
 ) -> None:
@@ -362,31 +362,31 @@ def remove(
         settings.get('CONFIG_HASH_DIR'),
         settings.get('CONFIG_HASH_FILE'))
 
-    validate(receipe)
+    validate(recipe)
     
     if force: 
-        logging.info(f"This configuration removes the receipe `{receipe}`")
+        logging.info(f"This configuration removes the recipe `{recipe}`")
         logging.info(f"Please set the flag to force `--force` to remove the configuration")
         raise typer.Exit()
     
     if not clean_files:
-        logging.info("Configuration doesn't remove the receipe file, please clean up manually")
+        logging.info("Configuration doesn't remove the recipe file, please clean up manually")
     
     with open(hash_config_dir) as data_file:
         data = json.load(data_file)
     
-    if not data.get(receipe, None):
-        logging.warning(f"`receipe`configuration not found in the hash dataset")
+    if not data.get(recipe, None):
+        logging.warning(f"`recipe`configuration not found in the hash dataset")
         raise typer.Exit()
     
-    del data[receipe]
+    del data[recipe]
     
     with open(hash_config_dir, "w") as data_file:
         data = json.dump(data, data_file)    
     
-    if clean_files and check_if_receipe_exists(receipe):
-        logging.info("dropping the receipe file..")
-        del_receipe_file(receipe)
+    if clean_files and check_if_recipe_exists(recipe):
+        logging.info("dropping the recipe file..")
+        del_recipe_file(recipe)
         
          
     return 0

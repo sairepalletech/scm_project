@@ -93,17 +93,17 @@ def create_def_files(user_dict) -> bool:
     return True
 
 
-def check_if_receipe_exists(receipe) -> bool:
+def check_if_recipe_exists(recipe) -> bool:
     return os.path.exists(
         os.path.join(os.getcwd(), os.environ['ROOT_PATH_FOR_DYNACONF'],
-                     f"{receipe}.toml"))
+                     f"{recipe}.toml"))
 
-def del_receipe_file(receipe) -> None:
+def del_recipe_file(recipe) -> None:
     return os.remove(os.path.join(os.getcwd(), os.environ['ROOT_PATH_FOR_DYNACONF'],
-                     f"{receipe}.toml"))
+                     f"{recipe}.toml"))
 
-def get_user_settings(receipe, validator=None, environments=True) -> Dict:
-    return Dynaconf(settings_files=[f"{receipe}.toml"], validators=validator)
+def get_user_settings(recipe, validator=None, environments=True) -> Dict:
+    return Dynaconf(settings_files=[f"{recipe}.toml"], validators=validator)
 
 
 def get_user_defined_resources(settings) -> Set:
