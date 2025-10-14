@@ -11,6 +11,9 @@ This tool, currently supports below resources
 
 >pre-requisites install python 3.6 & above environment on the machine
 
+## Project Documentation
+- 📋 [Product Roadmap](PRODUCT_ROADMAP.md) - Vision, value proposition, and future development plans
+
 # Installation
 ```bash
 sudo apt-get update
