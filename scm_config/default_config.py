@@ -41,7 +41,7 @@ def read_json(filename):
                 logging.warning(f"Invalid JSON file {file}")
                 return FILE_ERROR
     except FileNotFoundError:
-        logging.ERROR(f"File {filename} not found")
+        logging.error(f"File {filename} not found")
         return FILE_ERROR
 
 
