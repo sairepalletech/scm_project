@@ -1,0 +1,254 @@
+apiVersion: plugins.scm.dev/v1
+kind: Connector
+metadata:
+  name: github
+  version: 1.0.0
+  description: GitHub SCM connector for repository management, pull requests, and webhooks
+  maintainers:
+    - name: SCM Platform Team
+      email: platform@scm.dev
+      github: scm-platform
+  license: MIT
+  homepage: https://github.com/scm/plugins/github
+  repository: https://github.com/scm/plugins/github
+  documentation: https://docs.scm.dev/plugins/github
+  icon: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
+
+spec:
+  # Plugin capabilities - what this plugin can do
+  capabilities:
+    # Repository management
+    - repos:create
+    - repos:get
+    - repos:update
+    - repos:delete
+    - repos:list
+    - repos:archive
+    - repos:transfer
+    
+    # Branch protection
+    - repos:branch_protection
+    - repos:get_branch_protection
+    - repos:delete_branch_protection
+    
+    # Pull requests
+    - prs:open
+    - prs:get
+    - prs:list
+    - prs:update
+    - prs:merge
+    - prs:close
+    - prs:review
+    - prs:request_review
+    
+    # Issues
+    - issues:create
+    - issues:get
+    - issues:list
+    - issues:update
+    - issues:close
+    - issues:comment
+    
+    # Webhooks
+    - webhooks:create
+    - webhooks:list
+    - webhooks:update
+    - webhooks:delete
+    - webhooks:test
+    
+    # Teams and permissions
+    - teams:list
+    - teams:add_repo
+    - teams:remove_repo
+    
+    # Releases
+    - releases:create
+    - releases:list
+    - releases:get
+    - releases:update
+    - releases:delete
+
+  # Compatibility with SCM Platform versions
+  compatibility:
+    engine:
+      min: 2.0.0
+      max: 3.0.0
+      tested: [2.0.0, 2.0.1, 2.1.0]
+    api_version: v1
+
+  # Artifact information
+  artifacts:
+    image: ghcr.io/scm/plugins/github:1.0.0
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    signatures:
+      cosign: 
+        - algorithm: sha256
+          digest: abc123def456...
+    sbom:
+      format: spdx-json
+      location: https://github.com/scm/plugins/github/releases/download/v1.0.0/sbom.json
+    provenance:
+      slsa_level: 3
+      location: https://github.com/scm/plugins/github/releases/download/v1.0.0/provenance.json
+
+  # Configuration schema
+  config:
+    schema: schemas/config.json
+    
+    # Required secrets
+    secrets:
+      - name: token
+        description: GitHub personal access token (classic or fine-grained)
+        required: false  # Can use app credentials instead
+        vault_path: vault:kv/github/token
+        scopes:
+          - repo
+          - admin:repo_hook
+      
+      - name: app_private_key
+        description: GitHub App private key (PEM format)
+        required: false  # Can use PAT instead
+        vault_path: vault:kv/github/app-key
+    
+    # Configuration settings
+    settings:
+      - name: base_url
+        type: string
+        description: GitHub API base URL (use for GitHub Enterprise)
+        default: https://api.github.com
+        required: false
+        validation:
+          pattern: ^https://.*
+      
+      - name: app_id
+        type: integer
+        description: GitHub App ID (when using app authentication)
+        required: false
+      
+      - name: installation_id
+        type: integer
+        description: GitHub App installation ID
+        required: false
+      
+      - name: timeout
+        type: integer
+        description: API request timeout in seconds
+        default: 30
+        min: 5
+        max: 300
+      
+      - name: retry_max_attempts
+        type: integer
+        description: Maximum number of retry attempts
+        default: 3
+        min: 1
+        max: 10
+      
+      - name: cache_enabled
+        type: boolean
+        description: Enable response caching
+        default: true
+      
+      - name: cache_ttl
+        type: integer
+        description: Cache TTL in seconds
+        default: 300
+        min: 60
+        max: 3600
+
+  # Required permissions
+  permissions:
+    scopes:
+      - repo                 # Repository access
+      - admin:repo_hook      # Webhook management
+      - read:org            # Organization read access
+    
+    resources:
+      # Which repositories this plugin can access
+      # Supports wildcards
+      - github.com/*/*      # All repos (default)
+      # - github.com/myorg/*  # Specific org only
+    
+    rate_limits:
+      requests_per_hour: 5000
+      burst_size: 100
+      adaptive: true  # Adjust based on remaining quota
+
+  # Runtime configuration
+  runtime:
+    isolation: grpc  # or "wasm" or "native"
+    
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 256Mi
+        cpu: 500m
+    
+    timeout: 300s  # Maximum execution time for single operation
+    
+    health_check:
+      enabled: true
+      interval: 30s
+      timeout: 5s
+      endpoint: /healthz
+    
+    # Network access restrictions
+    network:
+      egress:
+        - api.github.com
+        - github.com
+        - uploads.github.com
+      ports:
+        - 443  # HTTPS only
+
+  # Plugin metadata for discovery
+  tags:
+    - scm
+    - git
+    - github
+    - vcs
+    - ci-cd
+  
+  categories:
+    - source-control
+    - collaboration
+  
+  keywords:
+    - repository
+    - pull-request
+    - issue
+    - webhook
+    - branch-protection
+
+# Additional metadata
+status:
+  phase: stable  # alpha, beta, stable, deprecated
+  verified: true  # Verified by SCM Platform team
+  certification: official  # official, partner, community
+
+support:
+  email: support@scm.dev
+  slack: https://scm-community.slack.com/channels/github-plugin
+  documentation: https://docs.scm.dev/plugins/github
+  issues: https://github.com/scm/plugins/github/issues
+
+changelog:
+  - version: 1.0.0
+    date: 2025-01-15
+    changes:
+      - Initial release
+      - Repository management
+      - Pull request operations
+      - Branch protection
+      - Webhook management
+  
+  - version: 0.9.0
+    date: 2024-12-01
+    changes:
+      - Beta release
+      - Core functionality
+      - Limited testing
